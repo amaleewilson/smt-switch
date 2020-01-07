@@ -39,6 +39,19 @@ if (BUILD_BTOR)
   add_subdirectory(tests/btor)
 endif (BUILD_BTOR)
 
+# should we build yices2?
+option (BUILD_YICES2
+  "Should we build the libraries for boolector" OFF)
+
+if (BUILD_YICES2)
+  set(YICES2_HOME "${PROJECT_SOURCE_DIR}/deps/yices2")
+  add_subdirectory (yices2)
+  set (EXTRA_LIBS ${EXTRA_LIBS} smt-switch-yices2)
+
+  # testing
+  add_subdirectory(tests/yices2)
+endif (BUILD_YICES2)
+
 
 # should we build cvc4?
 option (BUILD_CVC4
