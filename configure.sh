@@ -85,7 +85,7 @@ do
         --yices2-home) die "missing argument to $1 (see -h)" ;;
         --yices2-home=*)
             yices2_home=${1##*=}
-            # Check if btor_home is an absolute path and if not, make it
+            # Check if yices2_home is an absolute path and if not, make it
             # absolute.
             case $yices2_home in
                 /*) ;;                                      # absolute path
