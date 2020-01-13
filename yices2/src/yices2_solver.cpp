@@ -1,156 +1,129 @@
 #include "yices2_solver.h"
+#include "yices.h"
+#include <inttypes.h>
+
+using namespace std;
 
 namespace smt
 {
 
 /* Yices2 Op mappings */
-// const std::unordered_map<PrimOp, ::CVC4::api::Kind> primop2kind(
-    // { { And, ::CVC4::api::AND },
-    //   { Or, ::CVC4::api::OR },
-    //   { Xor, ::CVC4::api::XOR },
-    //   { Not, ::CVC4::api::NOT },
-    //   { Implies, ::CVC4::api::IMPLIES },
-    //   { Ite, ::CVC4::api::ITE },
-    //   { Iff, ::CVC4::api::EQUAL },
-    //   { Equal, ::CVC4::api::EQUAL },
-    //   { Distinct, ::CVC4::api::DISTINCT },
-    //   /* Uninterpreted Functions */
-    //   { Apply, ::CVC4::api::APPLY_UF },
-    //   /* Arithmetic Theories */
-    //   { Plus, ::CVC4::api::PLUS },
-    //   { Minus, ::CVC4::api::MINUS },
-    //   { Negate, ::CVC4::api::UMINUS },
-    //   { Mult, ::CVC4::api::MULT },
-    //   { Div, ::CVC4::api::DIVISION },
-    //   { Lt, ::CVC4::api::LT },
-    //   { Le, ::CVC4::api::LEQ },
-    //   { Gt, ::CVC4::api::GT },
-    //   { Ge, ::CVC4::api::GEQ },
-    //   { Mod, ::CVC4::api::INTS_MODULUS },
-    //   { Abs, ::CVC4::api::ABS },
-    //   { Pow, ::CVC4::api::POW },
-    //   { To_Real, ::CVC4::api::TO_REAL },
-    //   { To_Int, ::CVC4::api::TO_INTEGER },
-    //   { Is_Int, ::CVC4::api::IS_INTEGER },
-    //   /* Fixed Size BitVector Theory */
-    //   { Concat, ::CVC4::api::BITVECTOR_CONCAT },
-    //   // Indexed Op
-    //   { Extract, ::CVC4::api::BITVECTOR_EXTRACT },
-    //   { BVNot, ::CVC4::api::BITVECTOR_NOT },
-    //   { BVNeg, ::CVC4::api::BITVECTOR_NEG },
-    //   { BVAnd, ::CVC4::api::BITVECTOR_AND },
-    //   { BVOr, ::CVC4::api::BITVECTOR_OR },
-    //   { BVXor, ::CVC4::api::BITVECTOR_XOR },
-    //   { BVNand, ::CVC4::api::BITVECTOR_NAND },
-    //   { BVNor, ::CVC4::api::BITVECTOR_NOR },
-    //   { BVXnor, ::CVC4::api::BITVECTOR_XNOR },
-    //   { BVComp, ::CVC4::api::BITVECTOR_COMP },
-    //   { BVAdd, ::CVC4::api::BITVECTOR_PLUS },
-    //   { BVSub, ::CVC4::api::BITVECTOR_SUB },
-    //   { BVMul, ::CVC4::api::BITVECTOR_MULT },
-    //   { BVUdiv, ::CVC4::api::BITVECTOR_UDIV },
-    //   { BVSdiv, ::CVC4::api::BITVECTOR_SDIV },
-    //   { BVUrem, ::CVC4::api::BITVECTOR_UREM },
-    //   { BVSrem, ::CVC4::api::BITVECTOR_SREM },
-    //   { BVSmod, ::CVC4::api::BITVECTOR_SMOD },
-    //   { BVShl, ::CVC4::api::BITVECTOR_SHL },
-    //   { BVAshr, ::CVC4::api::BITVECTOR_ASHR },
-    //   { BVLshr, ::CVC4::api::BITVECTOR_LSHR },
-    //   { BVUlt, ::CVC4::api::BITVECTOR_ULT },
-    //   { BVUle, ::CVC4::api::BITVECTOR_ULE },
-    //   { BVUgt, ::CVC4::api::BITVECTOR_UGT },
-    //   { BVUge, ::CVC4::api::BITVECTOR_UGE },
-    //   { BVSlt, ::CVC4::api::BITVECTOR_SLT },
-    //   { BVSle, ::CVC4::api::BITVECTOR_SLE },
-    //   { BVSgt, ::CVC4::api::BITVECTOR_SGT },
-    //   { BVSge, ::CVC4::api::BITVECTOR_SGE },
-    //   // Indexed Op
-    //   { Zero_Extend, ::CVC4::api::BITVECTOR_ZERO_EXTEND },
-    //   // Indexed Op
-    //   { Sign_Extend, ::CVC4::api::BITVECTOR_SIGN_EXTEND },
-    //   // Indexed Op
-    //   { Repeat, ::CVC4::api::BITVECTOR_REPEAT },
-    //   // Indexed Op
-    //   { Rotate_Left, ::CVC4::api::BITVECTOR_ROTATE_LEFT },
-    //   // Indexed Op
-    //   { Rotate_Right, ::CVC4::api::BITVECTOR_ROTATE_RIGHT },
-    //   // Conversion
-    //   { BV_To_Nat, ::CVC4::api::BITVECTOR_TO_NAT },
-    //   // Indexed Op
-    //   { Int_To_BV, ::CVC4::api::INT_TO_BITVECTOR },
-    //   { Select, ::CVC4::api::SELECT },
-    //   { Store, ::CVC4::api::STORE },
-    //   { Const_Array, ::CVC4::api::STORE_ALL } }
-  // );
+typedef term_t (*yices_un_fun)(term_t);
+typedef term_t (*yices_bin_fun)(term_t, term_t);
+typedef term_t (*yices_tern_fun)(term_t, term_t, term_t);
+typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 
-// const std::unordered_map<::CVC4::api::Kind, PrimOp> kind2primop(
-//     { 
-      // { ::CVC4::api::AND, And },
-      // { ::CVC4::api::OR, Or },
-      // { ::CVC4::api::XOR, Xor },
-      // { ::CVC4::api::NOT, Not },
-      // { ::CVC4::api::IMPLIES, Implies },
-      // { ::CVC4::api::ITE, Ite },
-      // { ::CVC4::api::EQUAL, Iff },
-      // { ::CVC4::api::EQUAL, Equal },
-      // { ::CVC4::api::DISTINCT, Distinct },
-      // { ::CVC4::api::BITVECTOR_CONCAT, Concat },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_EXTRACT, Extract },
-      // { ::CVC4::api::BITVECTOR_NOT, BVNot },
-      // { ::CVC4::api::BITVECTOR_NEG, BVNeg },
-      // { ::CVC4::api::BITVECTOR_AND, BVAnd },
-      // { ::CVC4::api::BITVECTOR_OR, BVOr },
-      // { ::CVC4::api::BITVECTOR_XOR, BVXor },
-      // { ::CVC4::api::BITVECTOR_NAND, BVNand },
-      // { ::CVC4::api::BITVECTOR_NOR, BVNor },
-      // { ::CVC4::api::BITVECTOR_XNOR, BVXnor },
-      // { ::CVC4::api::BITVECTOR_COMP, BVComp },
-      // { ::CVC4::api::BITVECTOR_PLUS, BVAdd },
-      // { ::CVC4::api::BITVECTOR_SUB, BVSub },
-      // { ::CVC4::api::BITVECTOR_MULT, BVMul },
-      // { ::CVC4::api::BITVECTOR_UDIV, BVUdiv },
-      // { ::CVC4::api::BITVECTOR_SDIV, BVSdiv },
-      // { ::CVC4::api::BITVECTOR_UREM, BVUrem },
-      // { ::CVC4::api::BITVECTOR_SREM, BVSrem },
-      // { ::CVC4::api::BITVECTOR_SMOD, BVSmod },
-      // { ::CVC4::api::BITVECTOR_SHL, BVShl },
-      // { ::CVC4::api::BITVECTOR_ASHR, BVAshr },
-      // { ::CVC4::api::BITVECTOR_LSHR, BVLshr },
-      // { ::CVC4::api::BITVECTOR_ULT, BVUlt },
-      // { ::CVC4::api::BITVECTOR_ULE, BVUle },
-      // { ::CVC4::api::BITVECTOR_UGT, BVUgt },
-      // { ::CVC4::api::BITVECTOR_UGE, BVUge },
-      // { ::CVC4::api::BITVECTOR_SLT, BVSlt },
-      // { ::CVC4::api::BITVECTOR_SLE, BVSle },
-      // { ::CVC4::api::BITVECTOR_SGT, BVSgt },
-      // { ::CVC4::api::BITVECTOR_SGE, BVSge },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_ZERO_EXTEND, Zero_Extend },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_SIGN_EXTEND, Sign_Extend },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_REPEAT, Repeat },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_ROTATE_LEFT, Rotate_Left },
-      // // Indexed Op
-      // { ::CVC4::api::BITVECTOR_ROTATE_RIGHT, Rotate_Right },
-      // { ::CVC4::api::SELECT, Select },
-      // { ::CVC4::api::STORE, Store },
-      // { ::CVC4::api::STORE_ALL, Const_Array } 
-    // );
+// TODO:
+ //  /* Uninterpreted Functions */
+ //  Apply,
 
-// the kinds CVC4 needs to build an OpTerm for an indexed op
-// const std::unordered_map<PrimOp, ::CVC4::api::Kind> primop2optermcon(
-//     { 
-      // { Extract, ::CVC4::api::BITVECTOR_EXTRACT_OP },
-      // { Zero_Extend, ::CVC4::api::BITVECTOR_ZERO_EXTEND_OP },
-      // { Sign_Extend, ::CVC4::api::BITVECTOR_SIGN_EXTEND_OP },
-      // { Repeat, ::CVC4::api::BITVECTOR_REPEAT_OP },
-      // { Rotate_Left, ::CVC4::api::BITVECTOR_ROTATE_LEFT_OP },
-      // { Rotate_Right, ::CVC4::api::BITVECTOR_ROTATE_RIGHT_OP },
-      // { Int_To_BV, ::CVC4::api::INT_TO_BITVECTOR_OP } 
-    // });
+ //  // Integers only
+// yices_power(term_t t1, uint32_t d) 
+ //  Pow,
+
+ //  // Int/Real Conversion and Queries
+ //  To_Real,
+
+ //  /* Fixed Size BitVector Theory */
+ //  Extract, ??
+ //  BVComp, ?? 
+
+
+ //  Zero_Extend,
+ //  Sign_Extend,
+ //  Repeat,
+ //  Rotate_Left,
+ //  Rotate_Right,
+ //  // BitVector Conversion
+ //  BV_To_Nat,
+ //  Int_To_BV,
+
+ //  /* Array Theory */
+ //  Select,
+ //  Store,
+ //  Const_Array,
+
+
+
+const unordered_map<PrimOp, yices_un_fun> yices_unary_ops(
+  {
+    { Not, yices_not },
+    { Negate, yices_neg },
+    { Abs, yices_abs },
+    { To_Int, yices_floor },
+    { Is_Int, yices_is_int_atom },
+    { BVNot, yices_bvnot },
+    { BVNeg, yices_bvneg }
+  });
+
+const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
+    { 
+      { And, yices_and2 },
+      { Or, yices_or2 },
+      { Xor, yices_xor2 },
+      { Implies, yices_implies},
+      { Iff, yices_iff},
+      { Plus, yices_add },
+      { Minus, yices_sub },
+      { Mult, yices_mul },
+      { Div, yices_division },
+      { Lt, yices_arith_lt_atom },
+      { Le, yices_arith_leq_atom },
+      { Gt, yices_arith_gt_atom },
+      { Ge, yices_arith_geq_atom },
+      { Equal, yices_eq }, // yices_arith_eq_atom or yices_eq? 
+      { Mod, yices_imod},
+      { Concat, yices_bvconcat2},
+      { BVAnd, yices_bvand2 },
+      { BVOr, yices_bvor2 },
+      { BVXor, yices_bvxor2 },
+      { BVNand, yices_bvnand },
+      { BVNor, yices_bvnor },
+      { BVXnor, yices_bvxnor },
+      { BVAdd, yices_bvadd },
+      { BVSub, yices_bvsub },
+      { BVMul, yices_bvmul },
+      { BVUdiv, yices_bvdiv },
+      { BVUrem, yices_bvrem },
+      { BVSdiv, yices_bvsdiv },
+      { BVSrem, yices_bvsrem },
+      { BVSmod, yices_bvsmod },
+      { BVShl, yices_bvshl },
+      { BVAshr, yices_bvashr },
+      { BVLshr, yices_bvlshr },
+      { BVUlt, yices_bvlt_atom },
+      { BVUle, yices_bvle_atom },
+      { BVUgt, yices_bvgt_atom },
+      { BVUge, yices_bvge_atom },
+      { BVSle, yices_bvsle_atom },
+      { BVSlt, yices_bvslt_atom },
+      { BVSge, yices_bvsge_atom },
+      { BVSgt, yices_bvsgt_atom }
+
+
+    });
+
+const unordered_map<PrimOp, yices_tern_fun> yices_ternary_ops(
+    { { And, yices_and3 },
+      { Or, yices_or3},
+      { Xor, yices_xor3},
+      { Ite, yices_ite },
+      { BVAnd, yices_bvand3 },
+      { BVOr, yices_bvor3 },
+      { BVXor, yices_bvxor3 }
+    });
+
+const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
+    { { And, yices_and },
+      { Or, yices_or},
+      { Xor, yices_xor},
+      { Distinct, yices_distinct}
+      // { BVAnd, yices_bvand } needs const term. 
+    });
+
+// Need new list for variadic BV functions with const term_t[].
+
+
 
 /* Yices2Solver implementation */
 
@@ -196,9 +169,22 @@ Term Yices2Solver::make_term(bool b) const
 
 Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
 {
-  // try
-  // {
-  //   SortKind sk = sort->get_sort_kind();
+
+    SortKind sk = sort->get_sort_kind();
+    term_t y_term;
+    if (sk == INT){
+      y_term = yices_int32(i);
+    }
+    else {
+      //TODO
+      throw NotImplementedException(
+      "Smt-switch does not have any sorts that take one sort parameter yet.");
+    }
+
+  Term term(new Yices2Term(y_term));
+  // symbol_names.insert(name);
+  return term;
+
   //   ::CVC4::api::Term c;
 
   //   if ((sk == INT) || (sk == REAL))
@@ -226,9 +212,9 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
   // {
   //   // pretty safe to assume that an error is due to incorrect usage
   //   throw IncorrectUsageException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  // // }
+  // throw NotImplementedException(
+  //     "Smt-switch does not have any sorts that take one sort parameter yet.");
 }
 
 Term Yices2Solver::make_term(std::string val,
@@ -279,19 +265,52 @@ Term Yices2Solver::make_term(const Term & val, const Sort & sort) const
 
 void Yices2Solver::assert_formula(const Term& t) const
 {
-//   try
-//   {
-//     std::shared_ptr<CVC4Term> cterm = std::static_pointer_cast<CVC4Term>(t);
-//     solver.assertFormula(cterm->term);
-//   }
-//   catch (std::exception & e)
-//   {
-//     throw InternalSolverException(e.what());
-//   }
+  shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
+  if (yices_assert_formula(ctx, yterm->term))
+  {
+    string msg("Cannot assert term: ");
+    msg += t->to_string();
+    throw IncorrectUsageException(msg);
+  }
 }
 
 Result Yices2Solver::check_sat()
 {
+
+  auto res = yices_check_context(ctx, NULL);
+  if (res == STATUS_SAT)
+  {
+    return Result(SAT);
+  }
+  else if (res == STATUS_UNSAT)
+  {
+    return Result(UNSAT);
+  }
+  else
+  {
+    return Result(UNKNOWN);
+  }
+
+  // case STATUS_SAT:
+  //   printf("The formula is satisfiable\n");
+  //   model_t* model = yices_get_model(ctx, true);  // get the model
+
+  //   printf("Model\n");
+  //   code = yices_pp_model(stdout, model, 80, 4, 0); // print the model
+
+  //   int32_t v;
+  //   code = yices_get_int32_value(model, x, &v);   // get the value of x, we know it fits int32
+  //   printf("Value of x = %" PRId32 "\n", v);
+        
+
+  //   code = yices_get_int32_value(model, y, &v);   // get the value of y
+  //   printf("Value of y = %" PRId32 "\n", v);
+
+  //   yices_free_model(model); // clean up: delete the model
+    
+  //   break;
+
+
 //   try
 //   {
 //     ::CVC4::api::Result r = solver.checkSat();
@@ -316,7 +335,7 @@ Result Yices2Solver::check_sat()
 //   {
 //     throw InternalSolverException(e.what());
 //   }
-  throw NotImplementedException("Constant arrays not yet implemented.");
+  // throw NotImplementedException("Constant arrays not yet implemented.");
 
 }
 
@@ -402,18 +421,16 @@ void Yices2Solver::pop(uint64_t num)
 
 Term Yices2Solver::get_value(Term & t) const
 {
-  // try
-  // {
-  //   std::shared_ptr<CVC4Term> cterm = std::static_pointer_cast<CVC4Term>(t);
-  //   Term val(new CVC4Term(solver.getValue(cterm->term)));
-  //   return val;
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
+  model_t* model = yices_get_model(ctx, true);
+
+  // note: Function types are not supported for get_val_as_term
+  term_t yices_val = yices_get_value_as_term(model, yterm->term);
+
+  return Term(new Yices2Term(yices_val));
+
+  //todo: error checking. 
+
 }
 
 Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
@@ -433,37 +450,35 @@ Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
 
 Sort Yices2Solver::make_sort(SortKind sk) const
 {
-  // try
-  // {
-  //   if (sk == BOOL)
-  //   {
-  //     Sort s(new CVC4Sort(solver.getBooleanSort()));
-  //     return s;
-  //   }
-  //   else if (sk == INT)
-  //   {
-  //     Sort s(new CVC4Sort(solver.getIntegerSort()));
-  //     return s;
-  //   }
-  //   else if (sk == REAL)
-  //   {
-  //     Sort s(new CVC4Sort(solver.getRealSort()));
-  //     return s;
-  //   }
-  //   else
-  //   {
-  //     std::string msg("Can't create sort with sort constructor ");
-  //     msg += to_string(sk);
-  //     msg += " and no arguments";
-  //     throw IncorrectUsageException(msg.c_str());
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  try
+  {
+    if (sk == BOOL)
+    {
+      Sort s(new Yices2Sort(yices_bool_type()));
+      return s;
+    }
+    else if (sk == INT)
+    {
+      Sort s(new Yices2Sort(yices_int_type()));
+      return s;
+    }
+    else if (sk == REAL)
+    {
+      Sort s(new Yices2Sort(yices_real_type()));
+      return s;
+    }
+    else
+    {
+      std::string msg("Can't create sort with sort constructor ");
+      msg += to_string(sk);
+      msg += " and no arguments";
+      throw IncorrectUsageException(msg.c_str());
+    }
+  }
+  catch (std::exception & e)
+  {
+    throw InternalSolverException(e.what());
+  }
 }
 
 // WiP
@@ -473,7 +488,7 @@ Sort Yices2Solver::make_sort(SortKind sk, uint64_t size) const
   {
     if (sk == BV)
     {
-      Sort s(new Yices2BVSort(size));
+      Sort s(new Yices2Sort(yices_bv_type(size)));
       return s;
     }
     else
@@ -488,8 +503,6 @@ Sort Yices2Solver::make_sort(SortKind sk, uint64_t size) const
   {
     throw InternalSolverException(e.what());
   }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
 }
 
 Sort Yices2Solver::make_sort(SortKind sk, const Sort & sort1) const
@@ -608,10 +621,33 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   // std::shared_ptr<BoolectorSortBase> bs =
   //     std::static_pointer_cast<BoolectorSortBase>(sort);
 
-  SortKind sk = sort->get_sort_kind();
 
-  // yices 2 term_t thing
-  term_t y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
+  // SortKind sk = sort->get_sort_kind();
+  // term_t y_term; 
+  shared_ptr<Yices2Sort> ysort = static_pointer_cast<Yices2Sort>(sort);
+  term_t y_term = yices_new_uninterpreted_term(ysort->type);
+  yices_set_term_name(y_term, name.c_str());
+
+
+  //   }
+  //   else if (sk == INT)
+  //   {
+  //     Sort s(new Yices2Sort(yices_int_type()));
+  //     return s;
+  //   }
+  //   else if (sk == REAL)
+  //   {
+  //     Sort s(new Yices2Sort(yices_real_type()));
+  //     return s;
+  //   }
+
+  // if (sk == INT){
+  //   y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
+  // }
+
+
+  // // yices 2 term_t thing
+  // term_t y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
 
   // BoolectorNode * n;
   // if (sk == ARRAY)
@@ -652,58 +688,57 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
 {
-  // try
-  // {
-  //   std::shared_ptr<CVC4Term> cterm = std::static_pointer_cast<CVC4Term>(t);
-  //   if (op.num_idx == 0)
-  //   {
-  //     Term result(
-  //         new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op), cterm->term)));
-  //     return result;
-  //   }
-  //   else
-  //   {
-  //     ::CVC4::api::OpTerm ot = make_op_term(op);
-  //     Term result(new CVC4Term(
-  //         solver.mkTerm(primop2kind.at(op.prim_op), ot, cterm->term)));
-  //     return result;
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t);
+  term_t res;
+  if (!op.num_idx)
+  {
+    if (yices_unary_ops.find(op.prim_op) != yices_unary_ops.end())
+    {
+      res = yices_unary_ops.at(op.prim_op)(yterm0->term);
+    }
+    else
+    {
+      string msg("Can't apply ");
+      msg += op.to_string();
+      msg += " to the term or not supported by Yices2 backend yet.";
+      throw IncorrectUsageException(msg);
+    }
+  }
+  else
+  {
+    string msg = op.to_string();
+    msg += " not supported for one term argument";
+    throw IncorrectUsageException(msg);
+  }
+    return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
-  // try
-  // {
-  //   std::shared_ptr<CVC4Term> cterm0 = std::static_pointer_cast<CVC4Term>(t0);
-  //   std::shared_ptr<CVC4Term> cterm1 = std::static_pointer_cast<CVC4Term>(t1);
-  //   if (op.num_idx == 0)
-  //   {
-  //     Term result(new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op),
-  //                                            cterm0->term,
-  //                                            cterm1->term)));
-  //     return result;
-  //   }
-  // else
-  //   {
-  //     ::CVC4::api::OpTerm ot = make_op_term(op);
-  //     Term result(new CVC4Term(solver.mkTerm(
-  //         primop2kind.at(op.prim_op), ot, cterm0->term, cterm1->term)));
-  //     return result;
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
+  shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
+  term_t res;
+  if (!op.num_idx)
+  {
+    if (yices_binary_ops.find(op.prim_op) != yices_binary_ops.end())
+    {
+      res = yices_binary_ops.at(op.prim_op)(yterm0->term, yterm1->term);
+    }
+    else
+    {
+      string msg("Can't apply ");
+      msg += op.to_string();
+      msg += " to two terms, or not supported by Yices2 backend yet.";
+      throw IncorrectUsageException(msg);
+    }
+  }
+  else
+  {
+    string msg = op.to_string();
+    msg += " not supported for two term arguments";
+    throw IncorrectUsageException(msg);
+  }
+    return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op,
@@ -711,36 +746,31 @@ Term Yices2Solver::make_term(Op op,
                            const Term & t1,
                            const Term & t2) const
 {
-  // try
-  // {
-  //   std::shared_ptr<CVC4Term> cterm0 = std::static_pointer_cast<CVC4Term>(t0);
-  //   std::shared_ptr<CVC4Term> cterm1 = std::static_pointer_cast<CVC4Term>(t1);
-  //   std::shared_ptr<CVC4Term> cterm2 = std::static_pointer_cast<CVC4Term>(t2);
-  //   if (op.num_idx == 0)
-  //   {
-  //     Term result(new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op),
-  //                                            cterm0->term,
-  //                                            cterm1->term,
-  //                                            cterm2->term)));
-  //     return result;
-  //   }
-  // else
-  //   {
-  //     ::CVC4::api::OpTerm ot = make_op_term(op);
-  //     Term result(new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op),
-  //                                            ot,
-  //                                            cterm0->term,
-  //                                            cterm1->term,
-  //                                            cterm2->term)));
-  //     return result;
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
+  shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
+  shared_ptr<Yices2Term> yterm2 = static_pointer_cast<Yices2Term>(t2);
+  term_t res;
+  if (!op.num_idx)
+  {
+    if (yices_ternary_ops.find(op.prim_op) != yices_ternary_ops.end())
+    {
+      res = yices_ternary_ops.at(op.prim_op)(yterm0->term, yterm1->term, yterm2->term);
+    }
+    else
+    {
+      string msg("Can't apply ");
+      msg += op.to_string();
+      msg += " to two terms, or not supported by Yices2 backend yet.";
+      throw IncorrectUsageException(msg);
+    }
+  }
+  else
+  {
+    string msg = op.to_string();
+    msg += " not supported for two term arguments";
+    throw IncorrectUsageException(msg);
+  }
+    return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op, const TermVec & terms) const

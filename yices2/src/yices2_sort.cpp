@@ -2,112 +2,88 @@
 
 #include "yices2_sort.h"
 
+#include "exceptions.h"
+
+using namespace std;
+
 namespace smt {
 
-/* Yices2Solver implementation */
+// Yices2Sort implementation
 
-std::size_t Yices2SortBase::hash() const
+std::size_t Yices2Sort::hash() const
 {
-  // TODO: come up with better hash function
-  // std::size_t hash = sk;
-
-  // if(sk == BV)
-  // {
-  //   hash ^= get_width();
-  // }
-  // else if(sk == ARRAY)
-  // {
-  //   hash ^= get_indexsort()->hash();
-  //   hash ^= get_elemsort()->hash();
-  // }
-  // return hash;
+    throw NotImplementedException("Todo item.");
+  
 }
 
-
-// by default the following get_* methods don't work
-// overloaded in derived classes
-uint64_t Yices2SortBase::get_width() const
+uint64_t Yices2Sort::get_width() const
 {
-  throw IncorrectUsageException("Only defined for a bit-vector sort.");
-};
-
-Sort Yices2SortBase::get_indexsort() const
-{
-  throw IncorrectUsageException("Only defined for an array sort.");
-};
-
-Sort Yices2SortBase::get_elemsort() const
-{
-  throw IncorrectUsageException("Only defined for an array sort.");
-};
-
-SortVec Yices2SortBase::get_domain_sorts() const
-{
-  throw IncorrectUsageException("Only defined for a function sort.");
-};
-
-Sort Yices2SortBase::get_codomain_sort() const
-{
-  throw IncorrectUsageException("Only defined for a function sort.");
-};
-
-bool Yices2SortBase::compare(const Sort s) const
-{
-  // std::shared_ptr<Yices2SortBase> bs =
-  //     std::static_pointer_cast<Yices2SortBase>(s);
-  // if (sk != bs->get_sort_kind())
-  // {
-  //   // Note: bool and bv will still be equal for boolector, because always
-  //   // create BV sort even if it's a bool
-  //   return false;
-  // }
-
-  // switch (sk)
-  // {
-  //   case ARRAY:
-  //   {
-  //     return (get_indexsort() == bs->get_indexsort())
-  //            && (get_elemsort() == bs->get_elemsort());
-  //     break;
-  //   }
-  //   case BOOL:
-  //   case BV:
-  //   {
-  //     return get_width() == bs->get_width();
-  //     break;
-  //   }
-  //   case FUNCTION:
-  //   {
-  //     SortVec domain_sorts = get_domain_sorts();
-  //     SortVec bs_domain_sorts = bs->get_domain_sorts();
-
-  //     if (domain_sorts.size() != bs_domain_sorts.size())
-  //     {
-  //       return false;
-  //     }
-  //     else if (get_codomain_sort() != bs->get_codomain_sort())
-  //     {
-  //       return false;
-  //     }
-
-  //     bool res = true;
-
-  //     for (unsigned i = 0; i < domain_sorts.size(); ++i)
-  //     {
-  //       res &= (domain_sorts[i] == bs_domain_sorts[i]);
-  //     }
-
-  //     return res;
-  //     break;
-  //   }
-  //   default:
-  //   {
-  //     Unreachable();
-  //     break;
-  //   }
-  // }
-  return false;
+  size_t out_width;
+  if (yices_type_is_bitvector(type))
+  {
+    return (unsigned int)yices_bvtype_size(type);
+  }
+  else
+  {
+    throw IncorrectUsageException("Can only get width from bit-vector sort");
+  }
 }
-/* end Yices2Solver implementation */
+
+Sort Yices2Sort::get_indexsort() const
+{
+  throw NotImplementedException("Todo item.");
+}
+
+Sort Yices2Sort::get_elemsort() const
+{
+  throw NotImplementedException("Todo item.");
+}
+
+SortVec Yices2Sort::get_domain_sorts() const
+{
+  throw NotImplementedException("Todo item.");
+}
+
+Sort Yices2Sort::get_codomain_sort() const
+{
+  throw NotImplementedException("Todo item.");
+}
+
+bool Yices2Sort::compare(const Sort s) const
+{
+  throw NotImplementedException("Todo item.");
+}
+
+SortKind Yices2Sort::get_sort_kind() const
+{
+  if (yices_type_is_int(type))
+  {
+    return INT;
+  }
+  else if (yices_type_is_real(type))
+  {
+    return REAL;
+  }
+  else if (yices_type_is_bool(type))
+  {
+    return BOOL;
+  }
+  else if (yices_type_is_bitvector(type))
+  {
+    return BV;
+  }
+  // else if (msat_is_array_type(env, type, nullptr, nullptr))
+  // {
+  //   return ARRAY;
+  // }
+  // else if (is_uf_type)
+  // {
+  //   return FUNCTION;
+  // }
+  else
+  {
+    throw NotImplementedException("Unknown Yices2 type.");
+  }
+}
 
 }  // namespace smt

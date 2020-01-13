@@ -144,8 +144,8 @@ namespace smt {
 
 /* Yices2Term implementation */
 
-Yices2Term::Yices2Term(term_t yt)
-    : yt(yt)
+Yices2Term::Yices2Term(term_t term)
+    : term(term)
 {
   // BTOR_PARAM_NODE is not a symbol
   //  because it's not a symbolic constant, it's a free variable
@@ -263,54 +263,8 @@ bool Yices2Term::is_value() const
 
 std::string Yices2Term::to_string() const
 {
-  std::string sres;
+  std::string sres = yices_term_to_string(term, 120, 1, 0);
   return sres;
-
-//   // don't pointer chase!
-//   char * sym = btor_node_get_symbol(btor, BTOR_IMPORT_BOOLECTOR_NODE(node));
-
-//   if (sym)
-//   {
-//     // has a symbol
-//     if (negated)
-//     {
-//       sres = std::string("(bvnot ") + sym + ")";
-//     }
-//     else
-//     {
-//       sres = sym;
-//     }
-//     return sres;
-//   }
-//   else if (boolector_is_const(btor, node))
-//   {
-//     const char * btor_cstr = boolector_get_bits(btor, node);
-//     sres = "#b" + std::string(btor_cstr);
-//     boolector_free_bits(btor, btor_cstr);
-//     return sres;
-//   }
-//   else
-//   {
-//     // just print smt-lib
-//     // won't necessarily use symbol names (might use auxiliary variables)
-//     char * cres;
-//     size_t size;
-//     FILE * stream = open_memstream(&cres, &size);
-//     boolector_dump_smt2_node(btor, stream, node);
-//     int64_t status = fflush(stream);
-//     if (status != 0)
-//     {
-//       throw InternalSolverException("Error flushing stream for btor to_string");
-//     }
-//     status = fclose(stream);
-//     if (status != 0)
-//     {
-//       throw InternalSolverException("Error closing stream for btor to_string");
-//     }
-//     sres = cres;
-//     free(cres);
-//     return sres;
-//   }
 }
 
 uint64_t Yices2Term::to_int() const

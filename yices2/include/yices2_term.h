@@ -54,7 +54,7 @@ class Yices2TermIter : public TermIterBase
 class Yices2Term : public AbsTerm
 {
  public:
-  Yices2Term(term_t yt);
+  Yices2Term(term_t term);
   ~Yices2Term();
   std::size_t hash() const override;
   bool compare(const Term & absterm) const override;
@@ -70,7 +70,7 @@ class Yices2Term : public AbsTerm
   TermIter end() override;
 
  protected:
-  term_t yt;
+  term_t term;
   // Btor * btor;
   // the actual API level node that is used
   // Yices2Node * node;

@@ -1,0 +1,13 @@
+notes
+
+todos: 
+- GMP setup for the setup script 
+- catch out of memory errors
+
+
+misc API stuff that seems useful:
+
+void yices_free_string(char *s)
+Frees a string s returned by Yices.
+Several API functions build and return a character string that is allocated by Yices. To avoid memory leaks, this string must be freed when it is no longer used by calling this function.
+
