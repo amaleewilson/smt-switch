@@ -1,5 +1,7 @@
 set(YICES2_TESTS
   yices2-arrays
+  yices2-arrays-2
+  yices2-incremental
 )
 
 foreach(test ${YICES2_TESTS})

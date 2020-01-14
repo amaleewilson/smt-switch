@@ -10,6 +10,7 @@ namespace smt {
 
 // Yices2Sort implementation
 
+// TODO
 std::size_t Yices2Sort::hash() const
 {
     throw NotImplementedException("Todo item.");
@@ -31,12 +32,26 @@ uint64_t Yices2Sort::get_width() const
 
 Sort Yices2Sort::get_indexsort() const
 {
-  throw NotImplementedException("Todo item.");
+  if (yices_type_is_function(type))
+  {
+    return Sort(new Yices2Sort(idx_type));
+  }
+  else
+  {
+    throw IncorrectUsageException("Can only get index sort from array sort");
+  }
 }
 
 Sort Yices2Sort::get_elemsort() const
 {
-  throw NotImplementedException("Todo item.");
+  if (yices_type_is_function(type))
+  {
+    return Sort(new Yices2Sort(elem_type));
+  }
+  else
+  {
+    throw IncorrectUsageException("Can only get element sort from array sort");
+  }
 }
 
 SortVec Yices2Sort::get_domain_sorts() const
@@ -72,6 +87,15 @@ SortKind Yices2Sort::get_sort_kind() const
   {
     return BV;
   }
+  else if (yices_type_is_function(type))
+  {
+    //test if ARRAY or actually function... 
+    //just trying to get arrays to work for now.
+    return ARRAY;
+  }
+  // TODO: ARRAY, FUNCTION
+  //  In Yices, arrays are the same as functions, e.g.
+  // an array indexed by integers is simply a function of domain int
   // else if (msat_is_array_type(env, type, nullptr, nullptr))
   // {
   //   return ARRAY;

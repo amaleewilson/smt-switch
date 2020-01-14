@@ -15,11 +15,11 @@
 #include "smt.h"
 #include "sort.h"
 
-// Need these or nah? 
+// TODO: Need these or nah? 
 #include "ops.h"
 #include "term.h"
+#include <gmp.h>
 
-// #include <gmp.h>
 #include <yices.h>
 
 namespace smt {

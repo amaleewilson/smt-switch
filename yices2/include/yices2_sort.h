@@ -17,6 +17,8 @@ class Yices2Sort : public AbsSort
  public:
   Yices2Sort(type_t y_type)
       : type(y_type) {};
+  Yices2Sort(type_t y_type, type_t idx_t, type_t elem_t)
+      : type(y_type), idx_type(idx_t), elem_type(elem_t) {};
   ~Yices2Sort() = default;
   std::size_t hash() const override;
   uint64_t get_width() const override;
@@ -30,6 +32,8 @@ class Yices2Sort : public AbsSort
 
  protected:
   type_t type; 
+  type_t idx_type;
+  type_t elem_type;
 
   friend class Yices2Solver;
 };

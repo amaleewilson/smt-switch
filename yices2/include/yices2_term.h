@@ -3,13 +3,6 @@
 
 #include <vector>
 
-// #include "boolector.h"
-// extern "C" {
-// #include "btorcore.h"
-// #include "btornode.h"
-// #include "utils/btornodeiter.h"
-// }
-
 #include "term.h"
 #include "utils.h"
 
@@ -54,8 +47,8 @@ class Yices2TermIter : public TermIterBase
 class Yices2Term : public AbsTerm
 {
  public:
-  Yices2Term(term_t term);
-  ~Yices2Term();
+  Yices2Term(term_t t) : term(t) {};
+  ~Yices2Term() {};
   std::size_t hash() const override;
   bool compare(const Term & absterm) const override;
   Op get_op() const override;

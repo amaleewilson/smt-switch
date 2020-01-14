@@ -1,407 +1,266 @@
 #include "yices.h"
 #include "yices2_term.h"
+#include "yices2_sort.h"
 
-// include standard version of open_memstream
-// for compatability with FreeBSD / Darwin which doesn't support it natively
-// extern "C"
-// {
-// #include "memstream.h"
-// }
+#include "exceptions.h"
+#include "ops.h"
 
 #include <unordered_map>
-#include "stdio.h"
+
+using namespace std;
 
 namespace smt {
 
-/* global variables */
-// const std::unordered_map<BtorNodeKind, PrimOp> btorkind2primop({
-//     //{BTOR_INVALID_NODE}, // this should never happen
-//     { BTOR_BV_CONST_NODE, NUM_OPS_AND_NULL },
-//     { BTOR_VAR_NODE, NUM_OPS_AND_NULL },
-//     { BTOR_PARAM_NODE, NUM_OPS_AND_NULL },
-//     { BTOR_BV_SLICE_NODE, Extract },
-//     { BTOR_BV_AND_NODE, BVAnd },
-//     { BTOR_BV_EQ_NODE, BVComp },
-//     { BTOR_FUN_EQ_NODE, Equal },
-//     { BTOR_BV_ADD_NODE, BVAdd },
-//     { BTOR_BV_MUL_NODE, BVMul },
-//     { BTOR_BV_ULT_NODE, BVUlt },
-//     { BTOR_BV_SLL_NODE, BVShl },
-//     { BTOR_BV_SRL_NODE, BVLshr },
-//     { BTOR_BV_UDIV_NODE, BVUdiv },
-//     { BTOR_BV_UREM_NODE, BVUrem },
-//     { BTOR_BV_CONCAT_NODE, Concat },
-//     { BTOR_APPLY_NODE, Apply },
-//     // {BTOR_FORALL_NODE}, // TODO: implement later
-//     // {BTOR_EXISTS_NODE}, // TODO: implement later
-//     // {BTOR_LAMBDA_NODE}, // TODO: figure out when/how to use this, hopefully
-//     // only for quantifiers
-//     { BTOR_COND_NODE, Ite },
-//     // {BTOR_ARGS_NODE}, // should already be flattened in Yices2Term
-//     // constructor
-//     { BTOR_UF_NODE, NUM_OPS_AND_NULL },
-//     { BTOR_UPDATE_NODE, Store },
-//     // {BTOR_PROXY_NODE, NUM_OPS_AND_NULL} // should never happen
-//     // {BTOR_NUM_OPS_NOE} // should never be used
-// });
 
-// helpers
-// Op lookup_op(Btor * btor, Yices2Node * n)
-// {
-//   Op op;
+// Yices2TermIter implementation
 
-//   BtorNode * bn = BTOR_IMPORT_BOOLECTOR_NODE(n);
-//   if (btor_node_is_proxy(bn))
-//   {
-//     bn = btor_node_real_addr(btor_node_get_simplified(btor, bn));
-//   }
-//   BtorNodeKind k = bn->kind;
-
-//   // handle special cases
-//   if ((k == BTOR_APPLY_NODE) && btor_node_real_addr(bn->e[0])->is_array)
-//   {
-//     op = Op(Select);
-//   }
-//   else if (k == BTOR_BV_SLICE_NODE)
-//   {
-//     uint32_t upper = ((BtorBVSliceNode *)btor_node_real_addr(bn))->upper;
-//     uint32_t lower = ((BtorBVSliceNode *)btor_node_real_addr(bn))->lower;
-//     op = Op(Extract, upper, lower);
-//   }
-//   else if ((k == BTOR_LAMBDA_NODE) && (bn->is_array))
-//   {
-//     op = Op(Const_Array);
-//   }
-//   else
-//   {
-//     if (btorkind2primop.find(k) == btorkind2primop.end())
-//     {
-//       throw SmtException("Can't find PrimOp for BtorNodeKind "
-//                          + std::to_string(k) + " see boolector/btornode.h");
-//     }
-//     PrimOp po = btorkind2primop.at(k);
-//     op = Op(po);
-//   }
-//   return op;
-// }
-
-/* Yices2TermIter implementation */
-
-// Yices2TermIter & Yices2TermIter::operator=(const Yices2TermIter & it)
-// {
-//   // btor = it.btor;
-//   // children = it.children;
-//   idx = it.idx;
-//   return *this;
-// };
-
-// void Yices2TermIter::operator++() { idx++; };
-
-// const Term Yices2TermIter::operator*()
-// {
-//   BtorNode * res = children[idx];
-//   if (btor_node_real_addr(res)->kind == BTOR_ARGS_NODE)
-//   {
-//     throw SmtException("Should never have an args node in children look up");
-//   }
-
-//   // need to increment reference counter, because accessing child doesn't
-//   // increment it
-//   //  but Yices2Term destructor will release it
-//   // use real_addr?
-//   if (!btor_node_real_addr(res)->ext_refs)
-//   {
-//     if (btor_node_is_proxy(res))
-//     {
-//       res = btor_node_get_simplified(btor, res);
-//     }
-//     btor_node_inc_ext_ref_counter(btor, res);
-//   }
-
-//   Yices2Node * node = boolector_copy(btor, BTOR_EXPORT_BOOLECTOR_NODE(res));
-//   Term t(new Yices2Term(btor, node));
-//   return t;
-// };
-
-// bool Yices2TermIter::operator==(const Yices2TermIter & it)
-// {
-//   return ((btor == it.btor) && (idx == it.idx));
-// };
-
-// bool Yices2TermIter::operator!=(const Yices2TermIter & it)
-// {
-//   return ((btor != it.btor) || (idx != it.idx));
-// };
-
-// bool Yices2TermIter::equal(const TermIterBase & other) const
-// {
-//   // guaranteed to be safe by caller of equal (TermIterBase)
-//   const Yices2TermIter & bti = static_cast<const Yices2TermIter &>(other);
-//   return ((btor == bti.btor) && (idx == bti.idx));
-// }
-
-/* end Yices2TermIter implementation */
-
-/* Yices2Term implementation */
-
-Yices2Term::Yices2Term(term_t term)
-    : term(term)
+Yices2TermIter::Yices2TermIter(const Yices2TermIter & it)
 {
-  // BTOR_PARAM_NODE is not a symbol
-  //  because it's not a symbolic constant, it's a free variable
-  //  which will be bound by a lambda
-  // if (btor_node_is_proxy(bn))
-  // {
-  //   // change to this on smtcomp19 branch -- will be merged to master soon
-  //   // bn = btor_node_real_addr(btor_node_get_simplified(btor, bn));
-  //   bn = btor_node_real_addr(btor_node_get_simplified(btor, bn));
-  // }
-  // negated = (((((uintptr_t)node) % 2) != 0) && bn->kind != BTOR_BV_CONST_NODE);
-  // is_sym =
-  //     !negated && ((bn->kind == BTOR_VAR_NODE) || (bn->kind == BTOR_UF_NODE));
-}
-
-Yices2Term::~Yices2Term()
-{
-  // boolector_release(btor, node);
-}
-
-// TODO: check if this is okay -- probably not
-std::size_t Yices2Term::hash() const { 
+  // term = it.term;
+  // pos = it.pos;
   throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet."); 
-};
+      "Yices2Term function not implemented yet."); 
+}
+
+Yices2TermIter & Yices2TermIter::operator=(const Yices2TermIter & it)
+{
+  // term = it.term;
+  // pos = it.pos;
+  // return *this;
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
+
+void Yices2TermIter::operator++() { pos++; }
+
+const Term Yices2TermIter::operator*()
+{
+  // if (!pos && msat_term_is_uf(env, term))
+  // {
+  //   return Term(new Yices2Term(env, msat_term_get_decl(term)));
+  // }
+  // else
+  // {
+  //   uint32_t actual_idx = pos;
+  //   if (msat_term_is_uf(env, term))
+  //   {
+  //     actual_idx--;
+  //   }
+  //   return Term(new Yices2Term(env, msat_term_get_arg(term, actual_idx)));
+  // }
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
+
+bool Yices2TermIter::operator==(const Yices2TermIter & it)
+{
+  // return ((msat_term_id(term) == msat_term_id(it.term)) && (pos == it.pos));
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
+
+bool Yices2TermIter::operator!=(const Yices2TermIter & it)
+{
+  // return ((msat_term_id(term) != msat_term_id(it.term)) || (pos != it.pos));
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
+
+bool Yices2TermIter::equal(const TermIterBase & other) const
+{
+  // const Yices2TermIter & cti = static_cast<const Yices2TermIter &>(other);
+  // return ((msat_term_id(term) == msat_term_id(cti.term)) && (pos == cti.pos));
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
+
+// end Yices2TermIter implementation
+
+// Yices2Term implementation
+
+size_t Yices2Term::hash() const
+{
+  // if (!is_uf)
+  // {
+  //   return msat_term_id(term);
+  // }
+  // else
+  // {
+  //   return msat_decl_id(decl);
+  // }
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
+}
 
 bool Yices2Term::compare(const Term & absterm) const
 {
-  // std::shared_ptr<Yices2Term> other =
-  //     std::static_pointer_cast<Yices2Term>(absterm);
-  // return this->node == other->node;
-  return false;
+  // shared_ptr<Yices2Term> mterm = std::static_pointer_cast<Yices2Term>(absterm);
+  // if (is_uf ^ mterm->is_uf)
+  // {
+  //   // can't be equal if one is a uf and the other is not
+  //   return false;
+  // }
+  // else if (!is_uf)
+  // {
+  //   return (msat_term_id(term) == msat_term_id(mterm->term));
+  // }
+  // else
+  // {
+  //   return (msat_decl_id(decl) == msat_decl_id(mterm->decl));
+  // }
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
 }
 
 Op Yices2Term::get_op() const
 {
   throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
-//   Op op;
-
-//   if (negated)
-//   {
-//     op = Op(BVNot);
-//   }
-//   else
-//   {
-//     op = lookup_op(btor, node);
-//   }
-
-//   return op;
-};
+      "Yices2Term function not implemented yet."); 
+}
 
 Sort Yices2Term::get_sort() const
 {
+  // if (!is_uf)
+  // {
+  //   return Sort(new MsatSort(env, msat_term_get_type(term)));
+  // }
+  // else
+  // {
+  //   // need to reconstruct the function type
+  //   vector<msat_type> param_types;
+  //   size_t arity = msat_decl_get_arity(decl);
+  //   param_types.reserve(arity);
+  //   for (size_t i = 0; i < arity; i++)
+  //   {
+  //     param_types.push_back(msat_decl_get_arg_type(decl, i));
+  //   }
+
+  //   if (!param_types.size())
+  //   {
+  //     throw InternalSolverException("Expecting non-zero arity for UF.");
+  //   }
+
+  //   msat_type funtype = msat_get_function_type(env,
+  //                                              &param_types[0],
+  //                                              param_types.size(),
+  //                                              msat_decl_get_return_type(decl));
+
+  //   return Sort(new MsatSort(env, funtype, decl));
+  // }
   throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
-//   Sort sort;
-//   Yices2Sort s = boolector_get_sort(btor, node);
-//   if (boolector_is_bitvec_sort(btor, s))
-//   {
-//     uint64_t width = boolector_get_width(btor, node);
-//     // increment reference counter for the sort
-//     boolector_copy_sort(btor, s);
-//     sort = std::make_shared<Yices2BVSort>(btor, s, width);
-//   }
-//   else if (boolector_is_array_sort(btor, s))
-//   {
-//     uint64_t idxwidth = boolector_get_index_width(btor, node);
-//     uint64_t elemwidth = boolector_get_width(btor, node);
-//     // Note: Yices2 does not support multidimensional arrays
-//     std::shared_ptr<Yices2SortBase> idxsort =
-//         std::make_shared<Yices2BVSort>(
-//             btor, boolector_bitvec_sort(btor, idxwidth), idxwidth);
-//     std::shared_ptr<Yices2SortBase> elemsort =
-//         std::make_shared<Yices2BVSort>(
-//             btor, boolector_bitvec_sort(btor, elemwidth), elemwidth);
-//     // increment reference counter for the sort
-//     boolector_copy_sort(btor, s);
-//     sort = std::make_shared<Yices2ArraySort>(btor, s, idxsort, elemsort);
-//   }
-//   // FIXME : combine all sorts into one class -- easier that way
-//   // else if(boolector_is_fun_sort(btor, s))
-//   // {
-//   //   // FIXME: what if the arity is not one -- no way to get the domain sorts
-//   //   in current boolector api if (boolector_get_fun_arity(btor, node) != 1)
-//   //   {
-//   //     throw NotImplementedException("Yices2 does not support getting
-//   //     multiple domain sorts yet.");
-//   //   }
-//   //   Sort ds = boolector_fun_get_domain_sort(btor, node);
-//   //   Sort cds = boolector_fun_get_codomain_sort(btor, node);
-//   //   sort = std::make_shared<Yices2UFSort>(btor, s,
-//   //   std::vector<Yices2Sort>{ds}, cds);
-//   // }
-//   else
-//   {
-//     Unreachable();
-//   }
-//   return sort;
+      "Yices2Term function not implemented yet."); 
 }
 
 bool Yices2Term::is_symbolic_const() const
 {
-  return false;
+  // a symbolic constant is a term with no children and no built-in
+  // interpretation
+  // return (
+  //     (msat_term_arity(term) == 0)
+  //     && (msat_decl_get_tag(env, msat_term_get_decl(term)) == MSAT_TAG_UNKNOWN)
+  //     && !msat_term_is_number(env, term));
+
+  // good idea??? 
+  // return yices_type_is_bool()
+  ////// WiP monday: 
+  // return yices_type_is_bool(this->getsort->type) || yices_type_is_int .. etc
+
+  // throw NotImplementedException(
+  //     "Yices2Term function not implemented yet."); 
 }
 
 bool Yices2Term::is_value() const
 {
-//   bool res = boolector_is_const(btor, node);
-//   // constant arrays are considered values
-//   res |= is_const_array();
-//   return res;
-  return false;
+  // value if it has no children and a built-in interpretation
+  // return (msat_term_is_number(env, term) || msat_term_is_true(env, term)
+  //         || msat_term_is_false(env, term) ||
+  //         // constant arrays are considered values in smt-switch
+  //         msat_term_is_array_const(env, term));
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
 }
 
-std::string Yices2Term::to_string() const
+string Yices2Term::to_string() const
 {
+
   std::string sres = yices_term_to_string(term, 120, 1, 0);
   return sres;
+
+  // if (is_uf)
+  // {
+  //   if (MSAT_ERROR_DECL(decl))
+  //   {
+  //     throw SmtException("Can't get representation for MathSAT error decl!");
+  //   }
+  //   return msat_decl_repr(decl);
+  // }
+  // else
+  // {
+  //   if (MSAT_ERROR_TERM(term))
+  //   {
+  //     throw SmtException("Can't get representation for MathSAT error term!");
+  //   }
+  //   char * s = msat_to_smtlib2_term(env, term);
+  //   string res = s;
+  //   msat_free(s);
+  //   return res;
+  // }
 }
 
 uint64_t Yices2Term::to_int() const
 {
-  return 0;
-//   if (!boolector_is_const(btor, node))
-//   {
-//     throw IncorrectUsageException(
-//         "Can't get bitstring from a non-constant term.");
-//   }
-//   const char * assignment = boolector_bv_assignment(btor, node);
-//   std::string s(assignment);
-//   boolector_free_bv_assignment(btor, assignment);
-//   uint32_t width = boolector_get_width(btor, node);
-//   if (width > 64)
-//   {
-//     std::string msg("Can't represent a bit-vector of size ");
-//     msg += std::to_string(width);
-//     msg += " in a uint64_t";
-//     throw IncorrectUsageException(msg.c_str());
-//   }
-//   std::string::size_type sz = 0;
-//   return std::stoull(s, &sz, 2);
+  // char * s = msat_to_smtlib2_term(env, term);
+  // std::string val = s;
+  // msat_free(s);
+  // bool is_bv = msat_is_bv_type(env, msat_term_get_type(term), nullptr);
+
+  // // process smt-lib bit-vector format
+  // if (is_bv)
+  // {
+  //   if (val.find("(_ bv") == std::string::npos)
+  //   {
+  //     std::string msg = val;
+  //     msg += " is not a constant term, can't convert to int.";
+  //     throw IncorrectUsageException(msg.c_str());
+  //   }
+  //   val = val.substr(5, val.length());
+  //   val = val.substr(0, val.find(" "));
+  // }
+
+  // try
+  // {
+  //   return std::stoi(val);
+  // }
+  // catch (std::exception const & e)
+  // {
+  //   std::string msg("Term ");
+  //   msg += val;
+  //   msg += " does not contain an integer representable by a machine int.";
+  //   throw IncorrectUsageException(msg.c_str());
+  // }
+  throw NotImplementedException(
+      "Yices2Term function not implemented yet."); 
 }
 
-// /** Iterators for traversing the children
-//  */
-TermIter Yices2Term::begin()
-{
-
+TermIter Yices2Term::begin() { 
+  // return TermIter(new Yices2TermIter(env, term, 0)); 
   throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
-//   if (btor_node_is_proxy(bn))
-//   {
-//     bn = btor_node_get_simplified(btor, bn);
-//   }
-
-//   children.clear();
-//   BtorNode * tmp;
-//   for (size_t i = 0; i < bn->arity; ++i)
-//   {
-//     tmp = bn->e[i];
-//     // TODO: figure out if should we do this?
-//     // if (btor_node_is_proxy(tmp))
-//     // {
-//     //   tmp = btor_node_get_simplified(btor, tmp);
-//     // }
-//     if (btor_node_real_addr(tmp)->kind == BTOR_ARGS_NODE)
-//     {
-//       btor_iter_args_init(&ait, tmp);
-//       while (btor_iter_args_has_next(&ait))
-//       {
-//         children.push_back(btor_iter_args_next(&ait));
-//       }
-//     }
-//     else
-//     {
-//       children.push_back(tmp);
-//     }
-//   }
-
-//   if (negated)
-//   {
-//     // the negated value is the real address stored in bn
-//     children.clear();
-//     children.push_back(bn);
-//     return TermIter(new Yices2TermIter(btor, children, 0));
-//   }
-//   else if (is_const_array())
-//   {
-//     // constant array case
-//     // don't expose the parameter node of the lambda -- start at 1 instead of 0
-//     return TermIter(new Yices2TermIter(btor, children, 1));
-//   }
-//   else
-//   {
-//     return TermIter(new Yices2TermIter(btor, children, 0));
-//   }
+      "Yices2Term function not implemented yet."); 
 }
 
 TermIter Yices2Term::end()
 {
+  // uint32_t arity = msat_term_arity(term);
+  // if (msat_term_is_uf(env, term))
+  // {
+  //   // consider the function itself a child
+  //   arity++;
+  // }
+  // return TermIter(new Yices2TermIter(env, term, arity));
   throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
-//   if (btor_node_is_proxy(bn))
-//   {
-//     bn = btor_node_get_simplified(btor, bn);
-//   }
-
-//   if (negated)
-//   {
-//     BtorNode * e[3];
-//     // the negated value is the real address stored in bn
-//     e[0] = bn;
-//     // vector doesn't matter for end
-//     return TermIter(new Yices2TermIter(btor, std::vector<BtorNode *>{}, 1));
-//   }
-//   else
-//   {
-//     BtorNode * tmp;
-//     int64_t num_children = 0;
-//     for (size_t i = 0; i < bn->arity; ++i)
-//     {
-//       tmp = bn->e[i];
-//       // TODO: figure out if should we do this?
-//       // if (btor_node_is_proxy(tmp))
-//       // {
-//       //   tmp = btor_node_get_simplified(btor, tmp);
-//       // }
-//       // flatten args nodes (chains of arguments)
-//       if (btor_node_real_addr(tmp)->kind == BTOR_ARGS_NODE)
-//       {
-//         btor_iter_args_init(&ait, tmp);
-//         while (btor_iter_args_has_next(&ait))
-//         {
-//           btor_iter_args_next(&ait);
-//           num_children++;
-//         }
-//       }
-//       else
-//       {
-//         num_children++;
-//       }
-//     }
-//     // vector doesn't matter for end
-//     return TermIter(
-//         new Yices2TermIter(btor, std::vector<BtorNode *>{}, num_children));
-//   }
+      "Yices2Term function not implemented yet."); 
 }
 
-// // helpers
-
-// bool Yices2Term::is_const_array() const
-// {
-//   return ((bn->kind == BTOR_LAMBDA_NODE) && (bn->is_array));
-// }
-
-/* end Yices2Term implementation */
+// end Yices2Term implementation
 
 }  // namespace smt

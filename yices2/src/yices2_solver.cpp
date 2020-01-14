@@ -1,6 +1,7 @@
 #include "yices2_solver.h"
 #include "yices.h"
 #include <inttypes.h>
+#include "yices2_extensions.h"
 
 using namespace std;
 
@@ -39,7 +40,6 @@ typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
  //  Int_To_BV,
 
  //  /* Array Theory */
- //  Select,
  //  Store,
  //  Const_Array,
 
@@ -98,7 +98,8 @@ const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
       { BVSle, yices_bvsle_atom },
       { BVSlt, yices_bvslt_atom },
       { BVSge, yices_bvsge_atom },
-      { BVSgt, yices_bvsgt_atom }
+      { BVSgt, yices_bvsgt_atom },
+      { Select, ext_yices_select }
 
 
     });
@@ -172,10 +173,16 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
 
     SortKind sk = sort->get_sort_kind();
     term_t y_term;
-    if (sk == INT){
-      y_term = yices_int32(i);
+    if (sk == INT || sk == REAL)
+    {
+      y_term = yices_int64(i);
     }
-    else {
+    else if (sk == BV)
+    {
+      y_term = yices_bvconst_int64(sort->get_width(), i);
+    }
+    else 
+    {
       //TODO
       throw NotImplementedException(
       "Smt-switch does not have any sorts that take one sort parameter yet.");
@@ -291,108 +298,55 @@ Result Yices2Solver::check_sat()
     return Result(UNKNOWN);
   }
 
-  // case STATUS_SAT:
-  //   printf("The formula is satisfiable\n");
-  //   model_t* model = yices_get_model(ctx, true);  // get the model
-
-  //   printf("Model\n");
-  //   code = yices_pp_model(stdout, model, 80, 4, 0); // print the model
-
-  //   int32_t v;
-  //   code = yices_get_int32_value(model, x, &v);   // get the value of x, we know it fits int32
-  //   printf("Value of x = %" PRId32 "\n", v);
-        
-
-  //   code = yices_get_int32_value(model, y, &v);   // get the value of y
-  //   printf("Value of y = %" PRId32 "\n", v);
-
-  //   yices_free_model(model); // clean up: delete the model
-    
-  //   break;
-
-
-//   try
-//   {
-//     ::CVC4::api::Result r = solver.checkSat();
-//     if (r.isUnsat())
-//     {
-//       return Result(UNSAT);
-//     }
-//     else if (r.isSat())
-//     {
-//       return Result(SAT);
-//     }
-//     else if (r.isSatUnknown())
-//     {
-//       return Result(UNKNOWN, r.getUnknownExplanation());
-//     }
-//     else
-//     {
-//       throw NotImplementedException("Unimplemented result type from CVC4");
-//     }
-//   }
-//   catch (std::exception & e)
-//   {
-//     throw InternalSolverException(e.what());
-//   }
-  // throw NotImplementedException("Constant arrays not yet implemented.");
-
 }
 
 Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 {
-  // try
-  // {
-  //   // expecting (possibly negated) boolean literals
-  //   for (auto a : assumptions)
-  //   {
-  //     if (!a->is_symbolic_const() || a->get_sort()->get_sort_kind() != BOOL)
-  //     {
-  //       if (a->get_op() == Not && (*a->begin())->is_symbolic_const())
-  //       {
-  //         continue;
-  //       }
-  //       else
-  //       {
-  //         throw IncorrectUsageException(
-  //             "Expecting boolean indicator literals but got: "
-  //             + a->to_string());
-  //       }
-  //     }
-  //   }
 
-  //   std::vector<::CVC4::api::Term> cvc4assumps;
-  //   cvc4assumps.reserve(assumptions.size());
+  // expecting (possibly negated) boolean literals
+  for (auto a : assumptions)
+  {
+    if (!a->is_symbolic_const() || a->get_sort()->get_sort_kind() != BOOL)
+    {
+      if (a->get_op() == Not && (*a->begin())->is_symbolic_const())
+      {
+        continue;
+      }
+      else
+      {
+        throw IncorrectUsageException(
+            "Expecting boolean indicator literals but got: " + a->to_string());
+      }
+    }
+  }
+  
+  printf("check sat assuming\n");
 
-  //   std::shared_ptr<CVC4Term> cterm;
-  //   for (auto a : assumptions)
-  //   {
-  //     cvc4assumps.push_back(std::static_pointer_cast<CVC4Term>(a)->term);
-  //   }
-  //   ::CVC4::api::Result r = solver.checkSatAssuming(cvc4assumps);
-  //   if (r.isUnsat())
-  //   {
-  //     return Result(UNSAT);
-  //   }
-  //   else if (r.isSat())
-  //   {
-  //     return Result(SAT);
-  //   }
-  //   else if (r.isSatUnknown())
-  //   {
-  //     return Result(UNKNOWN, r.getUnknownExplanation());
-  //   }
-  //   else
-  //   {
-  //     throw NotImplementedException("Unimplemented result type from CVC4");
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  vector<term_t> y_assumps;
+  y_assumps.reserve(assumptions.size());
+
+  shared_ptr<Yices2Term> ya;
+  for (auto a : assumptions)
+  {
+    ya = static_pointer_cast<Yices2Term>(a);
+    y_assumps.push_back(ya->term);
+  }
+
+  auto res =
+      yices_check_context_with_assumptions(ctx, NULL, y_assumps.size(), &y_assumps[0]);
+
+  if (res == STATUS_SAT)
+  {
+    return Result(SAT);
+  }
+  else if (res == STATUS_UNSAT)
+  {
+    return Result(UNSAT);
+  }
+  else
+  {
+    return Result(UNKNOWN);
+  }
 }
 
 void Yices2Solver::push(uint64_t num)
@@ -515,31 +469,23 @@ Sort Yices2Solver::make_sort(SortKind sk,
                            const Sort & sort1,
                            const Sort & sort2) const
 {
-  // try
-  // {
-  //   if (sk == ARRAY)
-  //   {
-  //     std::shared_ptr<CVC4Sort> cidxsort =
-  //         std::static_pointer_cast<CVC4Sort>(sort1);
-  //     std::shared_ptr<CVC4Sort> celemsort =
-  //         std::static_pointer_cast<CVC4Sort>(sort2);
-  //     Sort s(new CVC4Sort(solver.mkArraySort(cidxsort->sort, celemsort->sort)));
-  //     return s;
-  //   }
-  //   else
-  //   {
-  //     std::string msg("Can't create sort with sort constructor ");
-  //     msg += to_string(sk);
-  //     msg += " and two Sort arguments";
-  //     throw IncorrectUsageException(msg.c_str());
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+
+  if (sk == ARRAY)
+  {
+    std::shared_ptr<Yices2Sort> yidxsort =
+        std::static_pointer_cast<Yices2Sort>(sort1);
+    std::shared_ptr<Yices2Sort> yelemsort =
+        std::static_pointer_cast<Yices2Sort>(sort2);
+    Sort s(new Yices2Sort(yices_function_type1(yidxsort->type, yelemsort->type), yidxsort->type, yelemsort->type));
+    return s;
+  }
+  else
+  {
+    std::string msg("Can't create sort with sort constructor ");
+    msg += to_string(sk);
+    msg += " and two Sort arguments";
+    throw IncorrectUsageException(msg.c_str());
+  }
 }
 
 Sort Yices2Solver::make_sort(SortKind sk,
@@ -723,6 +669,11 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     if (yices_binary_ops.find(op.prim_op) != yices_binary_ops.end())
     {
       res = yices_binary_ops.at(op.prim_op)(yterm0->term, yterm1->term);
+    }
+    else if (yices_variadic_ops.find(op.prim_op) != yices_variadic_ops.end())
+    {
+      term_t terms[2] = {yterm0->term, yterm1->term};
+      res = yices_variadic_ops.at(op.prim_op)(2, terms);
     }
     else
     {
