@@ -13,14 +13,14 @@ namespace smt {
 // TODO
 std::size_t Yices2Sort::hash() const
 {
-    throw NotImplementedException("Todo item.");
+    throw NotImplementedException("Todo item. Sort hash not implemented. ");
   
 }
 
 uint64_t Yices2Sort::get_width() const
 {
   size_t out_width;
-  if (yices_type_is_bitvector(type))
+  if (yices_type_is_bitvector(type)) 
   {
     return (unsigned int)yices_bvtype_size(type);
   }
@@ -56,17 +56,17 @@ Sort Yices2Sort::get_elemsort() const
 
 SortVec Yices2Sort::get_domain_sorts() const
 {
-  throw NotImplementedException("Todo item.");
+  throw NotImplementedException("Todo item. get domain sorts");
 }
 
 Sort Yices2Sort::get_codomain_sort() const
 {
-  throw NotImplementedException("Todo item.");
+  throw NotImplementedException("Todo item. get codomain sorts");
 }
 
 bool Yices2Sort::compare(const Sort s) const
 {
-  throw NotImplementedException("Todo item.");
+  throw NotImplementedException("Todo item. Sort compare");
 }
 
 SortKind Yices2Sort::get_sort_kind() const
@@ -91,7 +91,14 @@ SortKind Yices2Sort::get_sort_kind() const
   {
     //test if ARRAY or actually function... 
     //just trying to get arrays to work for now.
-    return ARRAY;
+    if (!is_function)
+    {
+      return ARRAY;
+    }
+    else
+    {
+      return FUNCTION;
+    }
   }
   // TODO: ARRAY, FUNCTION
   //  In Yices, arrays are the same as functions, e.g.

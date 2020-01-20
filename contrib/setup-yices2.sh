@@ -29,8 +29,10 @@ if [ ! -d "$DEPS/yices2" ]; then
     # Handle gmp dependence
     if [ "${machine}" == "Linux"  ]; then
         wget "https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz"
+        EXT=a
     elif [ "${machine}" == "Mac" ]; then
         curl -O https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
+        EXT=dylib
     fi
     tar -xf gmp-6.1.2.tar.xz 
     rm gmp-6.1.2.tar.xz
@@ -45,7 +47,7 @@ if [ ! -d "$DEPS/yices2" ]; then
     autoconf
     # TODO: unclear if this *needs* to be this complicated, but since we are 
     # interested in building yices2 statically, I think this is, in fact, necessary. 
-    ./configure --with-pic-gmp=${PWD}/gmp/lib/libgmp.a --with-pic-gmp-include-dir=${PWD}/gmp/include LDFLAGS="-L${PWD}/gmp/lib" CPPFLAGS="-I${PWD}/gmp/include"
+    ./configure --with-pic-gmp=${PWD}/gmp/lib/libgmp.${EXT} --with-pic-gmp-include-dir=${PWD}/gmp/include LDFLAGS="-L${PWD}/gmp/lib" CPPFLAGS="-I${PWD}/gmp/include"
 
     make build_dir=build BUILD=build -j$(nproc)
     cd $DIR

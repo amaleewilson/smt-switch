@@ -38,28 +38,28 @@ int main()
   Term il0 = s->make_symbol("il0", boolsort);
   s->assert_formula(s->make_term(Implies, il0, assumption0));
   r = s->check_sat_assuming(TermVec{ il0 });
-  // assert(r.is_unsat());
+  assert(r.is_unsat());
 
-  // Term il1 = s->make_symbol("il1", boolsort);
-  // Term assumption1 = s->make_term(Equal, x, s->make_term(1, bvsort8));
-  // s->assert_formula(s->make_term(Implies, il1, assumption1));
-  // r = s->check_sat_assuming({ il1 });
-  // assert(r.is_sat());
-  // assert(s->get_value(x)->to_int() == 1);
+  Term il1 = s->make_symbol("il1", boolsort);
+  Term assumption1 = s->make_term(Equal, x, s->make_term(1, bvsort8));
+  s->assert_formula(s->make_term(Implies, il1, assumption1));
+  r = s->check_sat_assuming({ il1 });
+  assert(r.is_sat());
+  assert(s->get_value(x)->to_int() == 1);
 
-  // s->push();
-  // s->assert_formula(assumption0);
-  // r = s->check_sat();
-  // assert(r.is_unsat());
-  // s->pop();
+  s->push();
+  s->assert_formula(assumption0);
+  r = s->check_sat();
+  assert(r.is_unsat());
+  s->pop();
 
-  // r = s->check_sat();
-  // assert(r.is_sat());
+  r = s->check_sat();
+  assert(r.is_sat());
 
-  // s->reset_assertions();
-  // s->assert_formula(assumption0);
-  // r = s->check_sat();
-  // assert(r.is_sat());
+  s->reset_assertions();
+  s->assert_formula(assumption0);
+  r = s->check_sat();
+  assert(r.is_sat());
 
   return 0;
 }

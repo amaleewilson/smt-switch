@@ -19,14 +19,11 @@ class Yices2Solver;
 class Yices2TermIter : public TermIterBase
 {
  public:
-  // boolector thing IMPORTANT: The correctness of this code depends on the array e being of size 3
-  Yices2TermIter(int64_t idx)
-      : idx(idx)
-  {
-  }
+  Yices2TermIter(term_t t, uint32_t p) : term(t), pos(p) {};
   Yices2TermIter(const Yices2TermIter & it)
   {
-    idx = it.idx;
+    term = it.term;
+    pos = it.pos;
   };
   ~Yices2TermIter(){};
   Yices2TermIter & operator=(const Yices2TermIter & it);
@@ -39,15 +36,15 @@ class Yices2TermIter : public TermIterBase
   bool equal(const TermIterBase & other) const override;
 
  private:
-  // Btor * btor;
-  // std::vector<BtorNode *> children;
-  int64_t idx;
+  term_t term;
+  uint32_t pos;
 };
 
 class Yices2Term : public AbsTerm
 {
  public:
   Yices2Term(term_t t) : term(t) {};
+  Yices2Term(term_t t, uint32_t ar) : term(t), term_arity(ar) {};
   ~Yices2Term() {};
   std::size_t hash() const override;
   bool compare(const Term & absterm) const override;
@@ -80,6 +77,8 @@ class Yices2Term : public AbsTerm
   // BtorArgsIterator ait;
   // for storing nodes before iterating
   // std::vector<BtorNode *> children;
+  bool is_function;
+  uint32_t term_arity; 
 
   // helpers
   bool is_const_array() const;
