@@ -86,6 +86,7 @@ class Yices2Solver : public AbsSmtSolver
                  const Term & t0,
                  const Term & t1,
                  const Term & t2) const override;
+  // TODO: check for distinct. 
   Term make_term(Op op, const TermVec & terms) const override;
   void reset() override;
   void reset_assertions() override;

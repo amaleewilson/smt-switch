@@ -308,6 +308,8 @@ Result Yices2Solver::check_sat()
 
 }
 
+// use bvextract, not bitextract. 
+
 Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 {
 

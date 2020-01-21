@@ -27,6 +27,9 @@ if [ ! -d "$DEPS/yices2" ]; then
     chmod -R 777 yices2
     cd yices2
     # Handle gmp dependence
+    # TODO: put gmp in DEPS/gmp
+    # then check if it exists
+    # so that mathsat can use it too
     if [ "${machine}" == "Linux"  ]; then
         wget "https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz"
         EXT=a
