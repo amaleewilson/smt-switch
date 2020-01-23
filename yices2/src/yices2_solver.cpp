@@ -262,9 +262,7 @@ Term Yices2Solver::make_term(std::string val,
   //   throw IncorrectUsageException(e.what());
   // }
   throw NotImplementedException(
-      "Smt-switch does not have make_term(std::string val,
-                           const Sort & sort,
-                           uint64_t base) const implemented yet.");
+      "Smt-switch does not have make_term(std::string val, const Sort & sort, uint64_t base) const implemented yet.");
 }
 
 Term Yices2Solver::make_term(const Term & val, const Sort & sort) const

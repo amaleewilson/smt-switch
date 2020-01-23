@@ -16,7 +16,7 @@ set(YICES2_TESTS
     #  yices2-const-arrays
     #  yices2-ite-test
       yices2-neg-numbers
-      amalee-tests
+    #  amalee-tests
 )
 
 foreach(test ${YICES2_TESTS})
