@@ -14,14 +14,16 @@ target_include_directories (smt-switch-yices2 PUBLIC "${YICES2_HOME}/src")
 target_include_directories (smt-switch-yices2 PUBLIC "${YICES2_HOME}/src/include")
 
 # TODO: fix this 
-target_include_directories (smt-switch-yices2 PUBLIC "${YICES2_HOME}/gmp/include")
+# target_include_directories (smt-switch-yices2 PUBLIC "${YICES2_HOME}/gmp/include")
+
+target_link_libraries(smt-switch-yices2 gmp)
 
 if(UNIX AND NOT APPLE)
-    target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/gmp/lib/libgmp.a")
+    # target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/gmp/lib/libgmp.a")
     target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/build/lib/libyices.a")
 else() 
     # Should figure out why, but my Mac did not like libgmp.a
-    target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/gmp/lib/libgmp.dylib")
+    # target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/gmp/lib/libgmp.dylib")
     target_link_libraries(smt-switch-yices2 "${YICES2_HOME}/build/lib/libyices.a")
 endif()
 

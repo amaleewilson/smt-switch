@@ -20,11 +20,7 @@ class Yices2TermIter : public TermIterBase
 {
  public:
   Yices2TermIter(term_t t, uint32_t p) : term(t), pos(p) {};
-  Yices2TermIter(const Yices2TermIter & it)
-  {
-    term = it.term;
-    pos = it.pos;
-  };
+  Yices2TermIter(const Yices2TermIter & it);
   ~Yices2TermIter(){};
   Yices2TermIter & operator=(const Yices2TermIter & it);
   void operator++() override;

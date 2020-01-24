@@ -14,6 +14,8 @@ typedef term_t (*yices_bin_fun)(term_t, term_t);
 typedef term_t (*yices_tern_fun)(term_t, term_t, term_t);
 typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 
+// typedef term_t (*yices_bv_fun)(uint32_t, term_t[]);
+
 // TODO:
  //  /* Uninterpreted Functions */
  //  Apply,
@@ -99,7 +101,8 @@ const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
       { BVSlt, yices_bvslt_atom },
       { BVSge, yices_bvsge_atom },
       { BVSgt, yices_bvsgt_atom },
-      { Select, ext_yices_select }
+      { Select, ext_yices_select },
+      { Apply, yices_application1}
 
 
     });
@@ -122,8 +125,15 @@ const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
       // { BVAnd, yices_bvand } needs const term. 
     });
 
-// Need new list for variadic BV functions with const term_t[].
+// Need new list for variadic BV functions with const term_t[]. ??
 
+// const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
+//     { { And, yices_and },
+//       { Or, yices_or},
+//       { Xor, yices_xor},
+//       { Distinct, yices_distinct}
+//       // { BVAnd, yices_bvand } needs const term. 
+//     });
 
 
 /* Yices2Solver implementation */
@@ -133,6 +143,7 @@ void Yices2Solver::set_opt(const std::string option, const std::string value)
   try
   {
     // I think yices ignores some options anyway. 
+    // Are there any options for this other than produce-models?
     // https://github.com/SRI-CSL/yices2/blob/622f0367ef6b0f4e7bfb380c856bac758f2acbe7/doc/manual/manual.tex
   }
   catch (std::exception & e)
@@ -141,20 +152,26 @@ void Yices2Solver::set_opt(const std::string option, const std::string value)
   }
 }
 
+//TODO!
 void Yices2Solver::set_logic(const std::string logic) const
 {
-  // try
-  // {
-  //   solver.setLogic(logic);
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
+  yices_free_context(ctx);
+  ctx_config_t *config = yices_new_config();
+  yices_default_config_for_logic(config, logic.c_str());
+  ctx = yices_new_context(config);
+  yices_free_config(config);
 }
 
 Term Yices2Solver::make_term(bool b) const
 {
+  if(b)
+  {
+    return Term(new Yices2Term(yices_true()));
+  }
+  else
+  {
+    return Term(new Yices2Term(yices_false()));
+  }
   // try
   // {
   //   Term c(new CVC4Term(solver.mkBoolean(b)));
@@ -164,8 +181,8 @@ Term Yices2Solver::make_term(bool b) const
   // {
   //   throw InternalSolverException(e.what());
   // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  // throw NotImplementedException(
+  //     "Smt-switch does not have any sorts that take one sort parameter yet.");
 }
 
 Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
@@ -224,45 +241,35 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
   //     "Smt-switch does not have any sorts that take one sort parameter yet.");
 }
 
-Term Yices2Solver::make_term(std::string val,
-                           const Sort & sort,
-                           uint64_t base) const
+Term Yices2Solver::make_term(const std::string val,
+                             const Sort & sort,
+                             uint64_t base) const
 {
-  // try
-  // {
-  //   SortKind sk = sort->get_sort_kind();
-  //   ::CVC4::api::Term c;
+  SortKind sk = sort->get_sort_kind();
+  if (sk == BV)
+  {
+    return Term(new Yices2Term(
+        ext_yices_make_bv_number(val.c_str(), sort->get_width(), base)));
+  }
+  else if (sk == REAL || sk == INT)
+  {
+    if (base != 10) 
+    {
+      // TODO: better error message...
+      throw NotImplementedException(
+          "base is bad");
+    }
 
-  //   if ((sk == INT) || (sk == REAL))
-  //   {
-  //     // TODO: Only do these checks in debug
-  //     if (base != 10)
-  //     {
-  //       throw IncorrectUsageException("Can't use non-decimal base for reals and ints");
-  //     }
-  //     c = solver.mkReal(val);
-  //   }
-  //   else if (sk == BV)
-  //   {
-  //     c = solver.mkBitVector(sort->get_width(), val, base);
-  //   }
-  //   else
-  //   {
-  //     std::string msg = "Can't create constant with integer for sort ";
-  //     msg += sort->to_string();
-  //     throw IncorrectUsageException(msg.c_str());
-  //   }
-
-  //   Term res(new CVC4Term(c));
-  //   return res;
-  // }
-  // catch (std::exception & e)
-  // {
-  //   // pretty safe to assume that an error is due to incorrect usage
-  //   throw IncorrectUsageException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have make_term(std::string val, const Sort & sort, uint64_t base) const implemented yet.");
+    return Term(new Yices2Term(yices_parse_float(val.c_str())));
+  }
+  else
+  {
+    string msg("Can't create value ");
+    msg += val;
+    msg += " with sort ";
+    msg += sort->to_string();
+    throw IncorrectUsageException(msg);
+  }
 }
 
 Term Yices2Solver::make_term(const Term & val, const Sort & sort) const
@@ -522,7 +529,7 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     // arity is one less, because last sort is return sort
     uint32_t arity = sorts.size() - 1;
 
-    string decl_name("internal_ref_fun");
+    // string decl_name("internal_ref_fun");
 
     std::vector<type_t> ysorts;
 
@@ -533,12 +540,12 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     {
       ysort = std::static_pointer_cast<Yices2Sort>(sorts[i])->type;
       ysorts.push_back(ysort);
-      decl_name += ("_" + sorts[i]->to_string());
+      // decl_name += ("_" + sorts[i]->to_string());
     }
 
     Sort sort = sorts.back();
     ysort = std::static_pointer_cast<Yices2Sort>(sort)->type;
-    decl_name += ("_return_" + sort->to_string());
+    // decl_name += ("_return_" + sort->to_string());
 
     type_t yfunsort = yices_function_type(arity, &ysorts[0], ysort);
 
@@ -548,7 +555,7 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     // msat_decl ref_fun_decl =
     //     msat_declare_function(env, decl_name.c_str(), mfunsort);
 
-    Sort funsort(new Yices2Sort(yfunsort, true, arity));
+    Sort funsort(new Yices2Sort(yfunsort, true));
     return funsort;
   }
   else if (sorts.size() == 1)
@@ -651,13 +658,71 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
 {
-  shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t);
+  shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
   term_t res;
-  if (!op.num_idx)
+
+  if (op.prim_op == Extract)
+  {
+    if (op.idx0 < 0 || op.idx1 < 0)
+    {
+      throw IncorrectUsageException("Can't have negative number in extract");
+    }
+    res = yices_bvextract(yterm->term, op.idx1, op.idx0);
+  }
+  else if (op.prim_op == Zero_Extend)
+  {
+    if (op.idx0 < 0)
+    {
+      throw IncorrectUsageException("Can't zero extend by negative number");
+    }
+    res = yices_zero_extend(yterm->term, op.idx0);
+  }
+  else if (op.prim_op == Sign_Extend)
+  {
+    if (op.idx0 < 0)
+    {
+      throw IncorrectUsageException("Can't sign extend by negative number");
+    }
+    res = yices_sign_extend(yterm->term, op.idx0);
+  }
+  else if (op.prim_op == Repeat)
+  {
+    if (op.num_idx < 1)
+    {
+      throw IncorrectUsageException("Can't create repeat with index < 1");
+    }
+    res = yices_bvrepeat(yterm->term, op.idx0);
+  }
+  else if (op.prim_op == Rotate_Left)
+  {
+    if (op.idx0 < 0)
+    {
+      throw IncorrectUsageException("Can't rotate by negative number");
+    }
+    res = yices_rotate_left(yterm->term, op.idx0);
+  }
+  else if (op.prim_op == Rotate_Right)
+  {
+    if (op.idx0 < 0)
+    {
+      throw IncorrectUsageException("Can't rotate by negative number");
+    }
+    res = yices_rotate_right(yterm->term, op.idx0);
+  }
+  else if (op.prim_op == Int_To_BV)
+  {
+    if (op.idx0 < 0)
+    {
+      throw IncorrectUsageException(
+          "Can't have negative width in Int_To_BV op");
+    }
+    res = yices_bvconst_int64(yterm->term, op.idx0);
+  }
+  else if (!op.num_idx)
   {
     if (yices_unary_ops.find(op.prim_op) != yices_unary_ops.end())
     {
-      res = yices_unary_ops.at(op.prim_op)(yterm0->term);
+      res = yices_unary_ops.at(op.prim_op)(yterm->term);
     }
     else
     {
@@ -777,6 +842,8 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
 
 void Yices2Solver::reset()
 {
+  yices_reset();
+  ctx = yices_new_context(NULL);
   // try
   // {
   //   solver.reset();
@@ -789,6 +856,8 @@ void Yices2Solver::reset()
 
 void Yices2Solver::reset_assertions()
 {
+  yices_reset_context(ctx);
+
   // try
   // {
   //   solver.resetAssertions();
@@ -798,6 +867,45 @@ void Yices2Solver::reset_assertions()
   //   throw InternalSolverException(e.what());
   // }
 }
+
+Term Yices2Solver::substitute(const Term term,
+                            const UnorderedTermMap & substitution_map) const
+{
+  shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(term);
+
+  vector<term_t> to_subst;
+  vector<term_t> values;
+
+  shared_ptr<Yices2Term> tmp_key;
+  shared_ptr<Yices2Term> tmp_val;
+  // TODO: Fallback to parent class implementation if there are uninterpreted
+  // functions
+  //       in the map
+  for (auto elem : substitution_map)
+  {
+    tmp_key = static_pointer_cast<Yices2Term>(elem.first);
+    // if (tmp_key->is_uf)
+    // {
+    //   throw NotImplementedException(
+    //       "MathSAT does not support substituting functions");
+    // }
+    to_subst.push_back(tmp_key->term);
+    tmp_val = static_pointer_cast<Yices2Term>(elem.second);
+    // if (tmp_val->is_uf)
+    // {
+    //   throw NotImplementedException(
+    //       "MathSAT does not support substituting functions");
+    // }
+    values.push_back(tmp_val->term);
+  }
+
+  // TODO: add guarded assertion in debug mode about size of vectors
+
+  term_t res = yices_subst_term(to_subst.size(), &to_subst[0], &values[0], yterm->term);
+
+  return Term(new Yices2Term(res));
+}
+
 
 void Yices2Solver::dump_smt2(FILE * file) const
 {

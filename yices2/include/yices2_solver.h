@@ -54,6 +54,7 @@ class Yices2Solver : public AbsSmtSolver
   };
   void set_opt(const std::string option, const std::string value) override;
   void set_logic(const std::string logic) const override;
+  void set_logic(const std::string logic);
   void assert_formula(const Term & t) const override;
   Result check_sat() override;
   Result check_sat_assuming(const TermVec & assumptions) override;
@@ -90,8 +91,8 @@ class Yices2Solver : public AbsSmtSolver
   Term make_term(Op op, const TermVec & terms) const override;
   void reset() override;
   void reset_assertions() override;
-  // Term substitute(const Term term,
-  //                 const UnorderedTermMap & substitution_map) const override;
+  Term substitute(const Term term,
+                  const UnorderedTermMap & substitution_map) const override;
   // helper methods for making a term with a primitive op
   Term apply_prim_op(PrimOp op, Term t) const;
   Term apply_prim_op(PrimOp op, Term t0, Term t1) const;
@@ -100,7 +101,7 @@ class Yices2Solver : public AbsSmtSolver
   void dump_smt2(FILE * file) const override;
 
  protected:
-  context_t * ctx;
+  mutable context_t * ctx;
 //   // store the names of created symbols
 //   std::unordered_set<std::string> symbol_names;
 //   // store array bases -- temporary until there are updates to yices2

@@ -14,19 +14,47 @@ namespace smt {
 
 // Yices2TermIter implementation
 
+Yices2TermIter::Yices2TermIter(const Yices2TermIter & it)
+{
+  // cout << "Yices2TermIter::Yices2TermIter(const Yices2TermIter & it)" << endl;
+  term = it.term;
+  pos = it.pos;
+}
+
 Yices2TermIter & Yices2TermIter::operator=(const Yices2TermIter & it)
 {
+  // cout << "" << endl;
+
   term = it.term;
   pos = it.pos;
   return *this;
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
 }
 
-void Yices2TermIter::operator++() { pos++; }
+void Yices2TermIter::operator++() { 
+  // cout << "++" << endl;
+
+  pos++; }
 
 const Term Yices2TermIter::operator*()
 {
+  if (! yices_term_is_composite (term) && !yices_term_is_function(term)){
+    // cout << " not composite : " << term << endl;
+    // cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
+    // cout << " yices_term_is_function : " << yices_term_is_function(term) << endl;
+    // cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
+    // cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
+    // cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
+    // cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(term) << endl;
+    // cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(term) << endl;
+    // cout << " type : " << yices_type_of_term(term) << endl;
+    // cout << "num children " << yices_term_num_children(term) << endl;
+    // cout << " child 0 " << yices_term_child(term, 0) << endl;
+    // cout << " child 1 " << yices_term_child(term, 1) << endl;
+    // cout << " child 2 " << yices_term_child(term, 2) << endl;
+    return Term(new Yices2Term((term)));
+  }
+
+  // cout << "*" << endl;
   if (!pos && /*msat_term_is_uf(env, term)*/ yices_term_is_function(term))
   {
     return Term(new Yices2Term(term));
@@ -39,7 +67,14 @@ const Term Yices2TermIter::operator*()
     {
       actual_idx--;
     }
-    return Term(new Yices2Term(yices_term_child(term, 0)));
+    // unsure if this is right
+    if ( yices_term_is_function(term)){
+      // cout << " function " << endl;
+    }
+    if (yices_term_child(term, actual_idx) == NULL_TERM){
+      // cout << "null term!!!" << endl;
+    }
+    return Term(new Yices2Term(yices_term_child(term, actual_idx))); 
   }
   // throw NotImplementedException(
   //     "Yices2Term function not implemented yet."); 
@@ -47,24 +82,21 @@ const Term Yices2TermIter::operator*()
 
 bool Yices2TermIter::operator==(const Yices2TermIter & it)
 {
+  // cout << "==" << endl;
   return ((term == it.term) && (pos == it.pos));
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
 }
 
 bool Yices2TermIter::operator!=(const Yices2TermIter & it)
 {
+  // cout << "!=" << endl;
   return ((term != it.term) || (pos != it.pos));
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
 }
 
 bool Yices2TermIter::equal(const TermIterBase & other) const
 {
+  // cout << "equal" << endl;
   const Yices2TermIter & cti = static_cast<const Yices2TermIter &>(other);
   return ((term == cti.term) && (pos == cti.pos));
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
 }
 
 // end Yices2TermIter implementation
@@ -73,46 +105,27 @@ bool Yices2TermIter::equal(const TermIterBase & other) const
 
 size_t Yices2Term::hash() const
 {
-  return 42;
-  // uint32_t lts = terms.live_terms;
-  // if (!is_uf)
-  // {
-  //   return msat_term_id(term);
-  // }
-  // else
-  // {
-  //   return msat_decl_id(decl);
-  // // }
-  // throw NotImplementedException(
-  //     "Yices2Term hash function not implemented yet."); 
+  return term;
 }
 
 bool Yices2Term::compare(const Term & absterm) const
 {
-  // Big TODO
   shared_ptr<Yices2Term> yterm = std::static_pointer_cast<Yices2Term>(absterm);
   return term == yterm->term;
-  // if (is_uf ^ mterm->is_uf)
-  // {
-  //   // can't be equal if one is a uf and the other is not
-  //   return false;
-  // }
-  // else if (!is_uf)
-  // {
-  //   return (msat_term_id(term) == msat_term_id(mterm->term));
-  // }
-  // else
-  // {
-  //   return (msat_decl_id(decl) == msat_decl_id(mterm->decl));
-  // }
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
 }
 
 Op Yices2Term::get_op() const
 {
-  throw NotImplementedException(
-      "Yices2Term function not implemented yet."); 
+  term_constructor_t tc = yices_term_constructor(term);
+  
+  if (tc == YICES_NOT_TERM)
+  {
+    return Op(Not);
+  }
+  else 
+  {
+    return Op();
+  }
 }
 
 Sort Yices2Term::get_sort() const
@@ -179,7 +192,9 @@ bool Yices2Term::is_symbolic_const() const
   // Maybe use yices_type_of_term? 
   // BtorTerm has is_sym, maybe that's a better idea. 
   // an uninterpreted term can be a function, so this is v problematic. 
-  return (tc == YICES_UNINTERPRETED_TERM && yices_term_num_children(term) == 0);
+  /// TODO: question: what about constant arrays???????
+  return (tc == YICES_UNINTERPRETED_TERM && yices_term_num_children(term) == 0) ||
+          tc == YICES_BV_CONSTANT;
 
 
   // throw NotImplementedException(
@@ -193,7 +208,7 @@ bool Yices2Term::is_value() const
   // TODO: Also this could be wrong... 
   return (tc == YICES_BOOL_CONSTANT || 
       tc == YICES_ARITH_CONSTANT ||
-      tc == YICES_BV_CONSTANT ||
+      // tc == YICES_BV_CONSTANT ||
       tc == YICES_SCALAR_CONSTANT);
   // value if it has no children and a built-in interpretation
   // return (msat_term_is_number(env, term) || msat_term_is_true(env, term)
@@ -234,42 +249,37 @@ string Yices2Term::to_string() const
 
 uint64_t Yices2Term::to_int() const
 {
-  // TODO
+  std::string val = yices_term_to_string(term, 120, 1, 0);
 
-  // char * s = msat_to_smtlib2_term(env, term);
-  // std::string val = s;
-  // msat_free(s);
-  // bool is_bv = msat_is_bv_type(env, msat_term_get_type(term), nullptr);
+  bool is_bv = yices_term_is_bitvector(term);
 
-  // // process smt-lib bit-vector format
-  // if (is_bv)
-  // {
-  //   if (val.find("(_ bv") == std::string::npos)
-  //   {
-  //     std::string msg = val;
-  //     msg += " is not a constant term, can't convert to int.";
-  //     throw IncorrectUsageException(msg.c_str());
-  //   }
-  //   val = val.substr(5, val.length());
-  //   val = val.substr(0, val.find(" "));
-  // }
+  // process bit-vector format
+  if (is_bv)
+  {
+    if (val.find("0b") == std::string::npos)
+    {
+      std::string msg = val;
+      msg += " is not a constant term, can't convert to int.";
+      throw IncorrectUsageException(msg.c_str());
+    }
+  }
 
-  // try
-  // {
-  //   return std::stoi(val);
-  // }
-  // catch (std::exception const & e)
-  // {
-  //   std::string msg("Term ");
-  //   msg += val;
-  //   msg += " does not contain an integer representable by a machine int.";
-  //   throw IncorrectUsageException(msg.c_str());
-  // }
-  throw NotImplementedException(
-      "Yices2Term function not implemented yet."); 
+  try
+  {
+    return std::stoi(val.substr(val.find("b")+1, val.length()), 0, 2);
+  }
+  catch (std::exception const & e)
+  {
+    std::string msg("Term ");
+    msg += val;
+    msg += " does not contain an integer representable by a machine int.";
+    throw IncorrectUsageException(msg.c_str());
+  }
+
 }
 
 TermIter Yices2Term::begin() { 
+  // cout << "new iter" << endl;
   return TermIter(new Yices2TermIter(term, 0)); 
   // throw NotImplementedException(
   //     "Yices2Term function not implemented yet."); 
@@ -284,7 +294,15 @@ TermIter Yices2Term::end()
   //   // consider the function itself a child
   //   arity++;
   // }
-  return TermIter(new Yices2TermIter(term, term_arity));
+  // cout << yices_term_num_children(term) << endl;
+    // cout << term << endl;
+
+  if (yices_term_num_children(term) < 0)
+  {
+    // cout << term << endl;
+    // cout << yices_error_string() << endl;
+  }
+  return TermIter(new Yices2TermIter(term, yices_term_num_children(term)));
   // throw NotImplementedException(
   //     "Yices2Term function not implemented yet."); 
 }

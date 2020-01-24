@@ -3,7 +3,7 @@
 #include <vector>
 #include "assert.h"
 
-#include "yics2_factory.h"
+#include "yices2_factory.h"
 #include "smt.h"
 // after a full installation
 // #include "smt-switch/msat_factory.h"
@@ -11,6 +11,8 @@
 
 using namespace smt;
 using namespace std;
+
+// TODO: ask Makai about this test. :) 
 
 int main()
 {
@@ -22,10 +24,20 @@ int main()
   Sort array4_8 = s->make_sort(ARRAY, bvsort4, bvsort8);
 
   Term idx = s->make_symbol("idx", bvsort4);
+    // cout << "idx " << idx->hash() << endl;
+
   Term x = s->make_symbol("x", bvsort8);
+    // cout << "x " << x->hash() << endl;
+
   Term y = s->make_symbol("y", bvsort8);
+    // cout << "y " << y->hash() << endl;
+
   Term z = s->make_symbol("z", bvsort8);
+    // cout << "z " << z->hash() << endl;
+
   Term arr = s->make_symbol("arr", array4_8);
+    // cout << "arr " << arr->hash() << endl;
+
 
   UnorderedTermSet orig_set = { idx, x, y, z, arr };
 
@@ -37,10 +49,20 @@ int main()
 
   UnorderedTermSet timed_set = { idx0, x0, y0, z0, arr0 };
 
+  Term a = s->make_term(Select, arr, idx);
+    // cout << "a " << a->hash() << endl;
+
+  Term b = s->make_term(BVMul, y, z);
+    // cout << "b " << b->hash() << endl;
+  Term d = s->make_term(BVAdd, x, b);
+    // cout << "d " << d->hash() << endl;
+
   Term constraint =
       s->make_term(Equal,
-                   s->make_term(Select, arr, idx),
-                   s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
+                   a,
+                   d);
+    // cout << "constraint " << constraint->hash() << endl;
+
 
   UnorderedTermSet visited;
   TermVec to_visit({ constraint });
@@ -49,21 +71,27 @@ int main()
   while (to_visit.size())
   {
     t = to_visit.back();
+    // cout << "t " << t << endl;
     to_visit.pop_back();
     if (visited.find(t) == visited.end())
     {
+      // cout << " visited. find == end" << endl;
       visited.insert(t);
       for (auto c : t)
       {
+        // cout << " c " << c << endl;
         to_visit.push_back(c);
       }
 
-      if (t->is_symbolic_const())
+      if (t->is_symbolic_const() || t->is_value())
       {
         num_consts++;
         cout << "checking " << t << endl;
         assert(orig_set.find(t) != orig_set.end());
       }
+    }
+    else{
+      // cout << " else " << endl;
     }
   }
   assert(num_consts == orig_set.size());

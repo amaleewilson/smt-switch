@@ -2,21 +2,18 @@ set(YICES2_TESTS
       yices2-tests
       yices2-arrays
       yices2-arrays-2
-    #  yices2-arrays2
       yices2-data-structures
       yices2-incremental
-    #  yices2-traversal
-      yices2-int-arithmetic
-    #  yices2-transfer
-    #  yices2-substitute
-    #  yices2-indexed-op-tests
-    #  yices2-array-models
-    #  yices2-ext-ops
-    #  yices2-interpolants
-    #  yices2-const-arrays
-    #  yices2-ite-test
+      yices2-traversal
+      yices2-int-arithmetic # does not work, nonlinear arithmetic. 
+      yices2-transfer # does not work, no term translator yet
+      yices2-substitute # question - weird iteration, but not broken. 
+      yices2-indexed-op-tests # finish get_op()
+      yices2-array-models # Works but Cannot do get val on array because it is a function
+      yices2-ext-ops
+      yices2-const-arrays # does not work, no term translator yet
+      yices2-ite-test
       yices2-neg-numbers
-    #  amalee-tests
 )
 
 foreach(test ${YICES2_TESTS})

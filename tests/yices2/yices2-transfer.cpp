@@ -29,7 +29,7 @@ int main()
   constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
   s->assert_formula(constraint);
 
-  SmtSolver s2 = MsatSolverFactory::create();
+  SmtSolver s2 = Yices2SolverFactory::create();
   s2->set_opt("produce-models", "true");
   s2->set_opt("incremental", "true");
 

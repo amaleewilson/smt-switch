@@ -27,7 +27,7 @@ int main()
   s->assert_formula(
       s->make_term(Lt, s->make_term(Negate, z), s->make_term(Minus, x, y)));
 
-  //TODO: need to settle nonlinear arithemetic issue!! 
+  //TODO!!!: need to settle nonlinear arithmetic issue!! 
   // s->assert_formula(
   //     s->make_term(Gt, s->make_term(Minus, x, y), s->make_term(Mult, x, y)));
 

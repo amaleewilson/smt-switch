@@ -3,7 +3,7 @@
 #include <vector>
 #include "assert.h"
 
-#include "yices_factory.h"
+#include "yices2_factory.h"
 #include "smt.h"
 // after a full installation
 // #include "smt-switch/msat_factory.h"

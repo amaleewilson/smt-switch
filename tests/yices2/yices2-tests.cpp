@@ -9,6 +9,10 @@
 // #include "smt-switch/boolector_factory.h"
 // #include "smt-switch/smt.h"
 
+
+// remove these
+#include "yices2_term.h"
+
 using namespace smt;
 using namespace std;
 
@@ -19,6 +23,10 @@ int main()
   s->set_opt("produce-models", "true");
   Sort bvsort8 = s->make_sort(BV, 8);
   Term x = s->make_symbol("x", bvsort8);
+
+
+  shared_ptr<Yices2Term> yterm;
+
 
   try
   {
@@ -67,6 +75,7 @@ int main()
   assert(uf->get_sort() != uf_app->get_sort());
 
   s->assert_formula(z_eq_xpy);
+
   s->assert_formula(s->make_term(BVUlt, x, s->make_term(4, bvsort8)));
   s->assert_formula(s->make_term(BVUlt, y, s->make_term(4, bvsort8)));
   s->assert_formula(s->make_term(BVUgt, z, s->make_term("5", bvsort8)));
