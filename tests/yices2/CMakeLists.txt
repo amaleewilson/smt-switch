@@ -7,7 +7,8 @@ set(YICES2_TESTS
       yices2-traversal
       yices2-int-arithmetic # does not work, nonlinear arithmetic. 
       yices2-transfer # does not work, no term translator yet
-      yices2-substitute # question - weird iteration, but not broken. 
+      yices2-substitute  
+      yices2-substitute2
       yices2-indexed-op-tests # finish get_op()
       yices2-array-models # Works but Cannot do get val on array because it is a function
       yices2-ext-ops

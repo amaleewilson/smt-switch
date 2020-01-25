@@ -1,3 +1,4 @@
+#include <gmp.h>
 #include "yices.h"
 #include "yices2_term.h"
 #include "yices2_sort.h"
@@ -37,10 +38,13 @@ void Yices2TermIter::operator++() {
 
 const Term Yices2TermIter::operator*()
 {
+  term_constructor_t tc = yices_term_constructor(term);
+
   if (! yices_term_is_composite (term) && !yices_term_is_function(term)){
+    // cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
     // cout << " not composite : " << term << endl;
     // cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
-    // cout << " yices_term_is_function : " << yices_term_is_function(term) << endl;
+    // cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
     // cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
     // cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
     // cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
@@ -51,33 +55,96 @@ const Term Yices2TermIter::operator*()
     // cout << " child 0 " << yices_term_child(term, 0) << endl;
     // cout << " child 1 " << yices_term_child(term, 1) << endl;
     // cout << " child 2 " << yices_term_child(term, 2) << endl;
-    return Term(new Yices2Term((term)));
+    // return Term(new Yices2Term((term)));
   }
 
-  // cout << "*" << endl;
-  if (!pos && /*msat_term_is_uf(env, term)*/ yices_term_is_function(term))
+  if (yices_term_is_function(term))
   {
-    return Term(new Yices2Term(term));
+    if (!pos)
+    {
+      return Term(new Yices2Term(term));
+    }
+
+    else
+    {
+      uint32_t actual_idx = pos - 1;
+      return Term(new Yices2Term(yices_term_child(term, actual_idx))); 
+    }
+  }
+  else if (yices_term_is_bvsum(term)) 
+  {
+    // cout << "term is bvsum " << endl; 
+    term_t component;
+    int32_t i = pos;
+    int32_t val[100]; // todo: make this equal to the size of the bv
+    yices_bvsum_component(term, i, val, &component);
+    return Term(new Yices2Term(component));
+  }
+  else if (yices_term_is_product(term))
+  {
+    // cout << "term is product " << endl;
+    term_t component;
+    int32_t i = pos;
+    uint32_t exp; // todo: make this equal to the size of the bv
+    yices_product_component(term, i, &component, &exp);
+    return Term(new Yices2Term(component));
+  }
+  else if (yices_term_is_sum(term))
+  {
+    // cout << "term is sum, pos = " << pos << endl;
+    term_t component;
+    int32_t i = pos;
+    mpq_t coeff;
+    mpq_init(coeff);
+    // = {1};
+
+    // cout << "child count: " << yices_term_num_children(term) << endl;
+    // cout << "yices_term_is_arithmetic: " << yices_term_is_arithmetic(term) << endl;
+
+    term_t test_child = yices_term_child(term, pos);
+    // cout << "test child " << test_child << endl;
+
+    yices_sum_component(term, i+1, coeff, &component);
+    // cout << "component called = " << endl;
+    // cout << "component after call = " << component << endl;
+
+
+    return Term(new Yices2Term(component));
   }
   else
-  {// uint32_t yices_val_function_arity(model_t *mdl, const yval_t *v)
-    // might need to handle children for ITE for example??
+  {
     uint32_t actual_idx = pos;
-    if (yices_term_is_function(term))
-    {
-      actual_idx--;
-    }
-    // unsure if this is right
-    if ( yices_term_is_function(term)){
-      // cout << " function " << endl;
-    }
-    if (yices_term_child(term, actual_idx) == NULL_TERM){
-      // cout << "null term!!!" << endl;
-    }
     return Term(new Yices2Term(yices_term_child(term, actual_idx))); 
   }
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet."); 
+
+  // // cout << "*" << endl;
+  // if (!pos && /*msat_term_is_uf(env, term)*/ yices_term_is_function(term))
+  // {
+    
+  // }
+  // else if (!pos && yices_term_is_bvsum(term)) 
+  // {
+
+  // }
+  // else 
+  // {// uint32_t yices_val_function_arity(model_t *mdl, const yval_t *v)
+  //   // might need to handle children for ITE for example??
+  //   uint32_t actual_idx = pos;
+  //   if (yices_term_is_function(term))
+  //   {
+  //     actual_idx--;
+  //   }
+  //   // unsure if this is right
+  //   if ( yices_term_is_function(term)){
+  //     // cout << " function " << endl;
+  //   }
+  //   if (yices_term_child(term, actual_idx) == NULL_TERM){
+  //     // cout << "null term!!!" << endl;
+  //   }
+  //   return Term(new Yices2Term(yices_term_child(term, actual_idx))); 
+  // }
+  // // throw NotImplementedException(
+  // //     "Yices2Term function not implemented yet."); 
 }
 
 bool Yices2TermIter::operator==(const Yices2TermIter & it)
@@ -118,13 +185,62 @@ Op Yices2Term::get_op() const
 {
   term_constructor_t tc = yices_term_constructor(term);
   
-  if (tc == YICES_NOT_TERM)
+  switch (tc) 
   {
-    return Op(Not);
-  }
-  else 
-  {
-    return Op();
+    case YICES_NOT_TERM: 
+      return Op(Not);
+      break;
+
+  //   YICES_BOOL_CONSTANT,
+  // YICES_ARITH_CONSTANT,
+  // YICES_BV_CONSTANT,
+  // YICES_SCALAR_CONSTANT,
+  // YICES_VARIABLE,
+  // YICES_UNINTERPRETED_TERM,
+  // composite terms
+    case YICES_ITE_TERM:
+  YICES_APP_TERM,
+  YICES_UPDATE_TERM,
+  YICES_TUPLE_TERM,
+  YICES_EQ_TERM,
+  YICES_DISTINCT_TERM,
+  YICES_FORALL_TERM,
+  YICES_LAMBDA_TERM,
+  YICES_NOT_TERM,
+  YICES_OR_TERM,
+  YICES_XOR_TERM,
+  YICES_BV_ARRAY,
+  YICES_BV_DIV,
+  YICES_BV_REM,
+  YICES_BV_SDIV,
+  YICES_BV_SREM,
+  YICES_BV_SMOD,
+  YICES_BV_SHL,
+  YICES_BV_LSHR,
+  YICES_BV_ASHR,
+  YICES_BV_GE_ATOM,
+  YICES_BV_SGE_ATOM,
+  YICES_ARITH_GE_ATOM,
+  YICES_ARITH_ROOT_ATOM,
+  YICES_ABS,
+  YICES_CEIL,
+  YICES_FLOOR,
+  YICES_RDIV,
+  YICES_IDIV,
+  YICES_IMOD,
+  YICES_IS_INT_ATOM,
+  YICES_DIVIDES_ATOM,
+  // projections
+  YICES_SELECT_TERM,
+  YICES_BIT_TERM,
+  // sums
+  YICES_BV_SUM,
+  YICES_ARITH_SUM,
+  // products
+  YICES_POWER_PRODUCT
+    default:
+      return Op();
+      break;
   }
 }
 

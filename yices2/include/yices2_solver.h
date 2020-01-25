@@ -5,6 +5,9 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <gmp.h>
+
+#include <yices.h>
 
 #include "yices2_extensions.h"
 #include "yices2_sort.h"
@@ -18,9 +21,7 @@
 // TODO: Need these or nah? 
 #include "ops.h"
 #include "term.h"
-#include <gmp.h>
 
-#include <yices.h>
 
 namespace smt {
 /**
@@ -31,7 +32,7 @@ class Yices2Solver : public AbsSmtSolver
  public:
   Yices2Solver()  
   {
-    yices_init();
+    // yices_init();
     ctx = yices_new_context(NULL);
 
     // context_t *ctx = ;
@@ -50,7 +51,7 @@ class Yices2Solver : public AbsSmtSolver
     //   yices2_release(btor, elem.second);
     // }
     yices_free_context(ctx);
-    yices_exit();
+    // yices_exit();
   };
   void set_opt(const std::string option, const std::string value) override;
   void set_logic(const std::string logic) const override;

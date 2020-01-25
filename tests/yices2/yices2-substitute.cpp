@@ -90,9 +90,6 @@ int main()
         assert(orig_set.find(t) != orig_set.end());
       }
     }
-    else{
-      // cout << " else " << endl;
-    }
   }
   assert(num_consts == orig_set.size());
 

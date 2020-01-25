@@ -251,8 +251,9 @@ Term Yices2Solver::make_term(const std::string val,
     return Term(new Yices2Term(
         ext_yices_make_bv_number(val.c_str(), sort->get_width(), base)));
   }
-  else if (sk == REAL || sk == INT)
+  else if (sk == REAL)
   {
+    cout << "making real term from string" << endl;
     if (base != 10) 
     {
       // TODO: better error message...
@@ -261,6 +262,14 @@ Term Yices2Solver::make_term(const std::string val,
     }
 
     return Term(new Yices2Term(yices_parse_float(val.c_str())));
+  }
+  else if (sk == INT)
+  {
+    cout << "making int term from string: " << val << endl;
+    int i = stoi(val);
+    yices_int64(i);
+    cout << "int term made" << endl;
+
   }
   else
   {
@@ -369,6 +378,7 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 
 void Yices2Solver::push(uint64_t num)
 {
+  yices_push(ctx);
   // try
   // {
   //   solver.push(num);
@@ -381,6 +391,7 @@ void Yices2Solver::push(uint64_t num)
 
 void Yices2Solver::pop(uint64_t num)
 {
+  yices_pop(ctx);
   // try
   // {
   //   solver.pop(num);
@@ -759,6 +770,8 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     }
     else
     {
+      cout << "two terms" << endl;
+
       string msg("Can't apply ");
       msg += op.to_string();
       msg += " to two terms, or not supported by Yices2 backend yet.";
@@ -791,6 +804,7 @@ Term Yices2Solver::make_term(Op op,
     }
     else
     {
+      cout << "three terms" << endl;
       string msg("Can't apply ");
       msg += op.to_string();
       msg += " to two terms, or not supported by Yices2 backend yet.";
@@ -808,37 +822,130 @@ Term Yices2Solver::make_term(Op op,
 
 Term Yices2Solver::make_term(Op op, const TermVec & terms) const
 {
-  // try
-  // {
-  //   std::vector<::CVC4::api::Term> cterms;
-  //   cterms.reserve(terms.size());
-  //   std::shared_ptr<CVC4Term> cterm;
-  //   for (auto t : terms)
-  //   {
-  //     cterm = std::static_pointer_cast<CVC4Term>(t);
-  //     cterms.push_back(cterm->term);
-  //   }
-  //   if (op.num_idx == 0)
-  //   {
-  //     Term result(
-  //         new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op), cterms)));
-  //     return result;
-  //   }
-  //   else
-  //   {
-  //     ::CVC4::api::OpTerm ot = make_op_term(op);
-  //     Term result(
-  //         new CVC4Term(solver.mkTerm(primop2kind.at(op.prim_op), ot, cterms)));
-  //     return result;
-  //   }
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+
+  size_t size = terms.size();
+  if (!size)
+  {
+    string msg("Can't apply ");
+    msg += op.to_string();
+    msg += " to zero terms.";
+    throw IncorrectUsageException(msg);
+  }
+  else if (size == 1)
+  {
+    return make_term(op, terms[0]);
+  }
+  else if (size == 2)
+  {
+    return make_term(op, terms[0], terms[1]);
+  }
+  else if (size == 3)
+  {
+    return make_term(op, terms[0], terms[1], terms[2]);
+  }
+  else if (op.prim_op == Apply)
+  {
+    vector<term_t> yargs;
+    yargs.reserve(size);
+    shared_ptr<Yices2Term> yterm;
+
+    // skip the first term (that's actually a function)
+    for (size_t i = 1; i < terms.size(); i++)
+    {
+      yterm = static_pointer_cast<Yices2Term>(terms[i]);
+      yargs.push_back(yterm->term);
+    }
+
+    yterm = static_pointer_cast<Yices2Term>(terms[0]);
+    if (!yices_term_is_function(yterm->term))
+    {
+      string msg(
+          "Expecting an uninterpreted function to be used with Apply but got ");
+      msg += terms[0]->to_string();
+      throw IncorrectUsageException(msg);
+    }
+
+    term_t res = yices_application(yterm->term, size - 1,  &yargs[0]);
+
+    if (res == -1)
+    {
+      throw InternalSolverException("Got error term.");
+    }
+    return Term(new Yices2Term(res));
+  }
+  //else if() ... check the variadic terms list. 
+  else
+  {
+    string msg("Can't apply ");
+    msg += op.to_string();
+    msg += " to ";
+    msg += ::std::to_string(size);
+    msg += " terms.";
+    throw IncorrectUsageException(msg);
+  }
 }
+//     if (sk == FUNCTION)
+//   {
+//     if (sorts.size() < 2)
+//     {
+//       throw IncorrectUsageException(
+//           "Function sort must have >=2 sort arguments.");
+//     }
+
+//     // arity is one less, because last sort is return sort
+//     uint32_t arity = sorts.size() - 1;
+
+//     // string decl_name("internal_ref_fun");
+
+//     std::vector<type_t> ysorts;
+
+//     ysorts.reserve(arity);
+
+//     type_t ysort;
+//     for (uint32_t i = 0; i < arity; i++)
+//     {
+//       ysort = std::static_pointer_cast<Yices2Sort>(sorts[i])->type;
+//       ysorts.push_back(ysort);
+//       // decl_name += ("_" + sorts[i]->to_string());
+//     }
+
+//     Sort sort = sorts.back();
+//     ysort = std::static_pointer_cast<Yices2Sort>(sort)->type;
+//     // decl_name += ("_return_" + sort->to_string());
+
+//     type_t yfunsort = yices_function_type(arity, &ysorts[0], ysort);
+
+
+//     // creating a reference decl, because it's the only way to get codomain and
+//     // domain sorts i.e. there's no msat_is_function_type(msat_env, msat_type)
+//     // msat_decl ref_fun_decl =
+//     //     msat_declare_function(env, decl_name.c_str(), mfunsort);
+
+//     Sort funsort(new Yices2Sort(yfunsort, true));
+//     return funsort;
+//   }
+//   else if (sorts.size() == 1)
+//   {
+//     return make_sort(sk, sorts[0]);
+//   }
+//   else if (sorts.size() == 2)
+//   {
+//     return make_sort(sk, sorts[0], sorts[1]);
+//   }
+//   else if (sorts.size() == 3)
+//   {
+//     return make_sort(sk, sorts[0], sorts[1], sorts[2]);
+//   }
+//   else
+//   {
+//     std::string msg("Can't create sort from sort constructor ");
+//     msg += to_string(sk);
+//     msg += " with a vector of sorts";
+//     throw IncorrectUsageException(msg.c_str());
+//   }
+//   throw NotImplementedException(
+//       "Smt-switch does not have any sorts that take one sort parameter yet.");
+// }
 
 void Yices2Solver::reset()
 {
