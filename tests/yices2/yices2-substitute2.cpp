@@ -29,6 +29,7 @@ int main()
 
   Term constraint = s->make_term(Equal, z, s->make_term(BVAdd, x, y));
   constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  cout << constraint << endl;
   s->assert_formula(constraint);
 
 

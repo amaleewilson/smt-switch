@@ -26,7 +26,9 @@ int main()
   Term b = s->make_symbol("b", s->make_sort(INT));
 
   Term constraint = s->make_term(Equal, z, s->make_term(BVAdd, x, y));
+  // cout << "constraint " << constraint << endl;
   constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  cout << "constraint " << constraint << endl;
   s->assert_formula(constraint);
 
   SmtSolver s2 = Yices2SolverFactory::create();

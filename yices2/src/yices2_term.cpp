@@ -1,4 +1,4 @@
-#include <gmp.h>
+#include "gmp.h"
 #include "yices.h"
 #include "yices2_term.h"
 #include "yices2_sort.h"
@@ -91,7 +91,7 @@ const Term Yices2TermIter::operator*()
   }
   else if (yices_term_is_sum(term))
   {
-    // cout << "term is sum, pos = " << pos << endl;
+    cout << "term is sum, pos = " << pos << endl;
     term_t component;
     int32_t i = pos;
     mpq_t coeff;
@@ -104,7 +104,7 @@ const Term Yices2TermIter::operator*()
     term_t test_child = yices_term_child(term, pos);
     // cout << "test child " << test_child << endl;
 
-    yices_sum_component(term, i+1, coeff, &component);
+    yices_sum_component(term, i, coeff, &component);
     // cout << "component called = " << endl;
     // cout << "component after call = " << component << endl;
 
@@ -113,6 +113,12 @@ const Term Yices2TermIter::operator*()
   }
   else
   {
+    cout << " falling through... " << tc << " is it yices_arith_leq_atom? " << " pos " << pos << endl;
+    if (tc == 28 )
+    {
+      Term qq = Term(new Yices2Term(yices_term_child(term, pos)));
+      cout << " 28 : " << qq->to_string() << endl;
+    }
     uint32_t actual_idx = pos;
     return Term(new Yices2Term(yices_term_child(term, actual_idx))); 
   }
@@ -190,54 +196,72 @@ Op Yices2Term::get_op() const
     case YICES_NOT_TERM: 
       return Op(Not);
       break;
-
-  //   YICES_BOOL_CONSTANT,
-  // YICES_ARITH_CONSTANT,
-  // YICES_BV_CONSTANT,
-  // YICES_SCALAR_CONSTANT,
-  // YICES_VARIABLE,
-  // YICES_UNINTERPRETED_TERM,
+    case YICES_BOOL_CONSTANT:
+      return Op();
+      break;
+    case YICES_ARITH_CONSTANT:
+      return Op();
+      break;
+    case YICES_BV_CONSTANT:
+      return Op();
+      break;
+    case YICES_SCALAR_CONSTANT:
+      return Op();
+      break;
+    case YICES_VARIABLE:
+      return Op();
+      break;
+    case YICES_UNINTERPRETED_TERM:
+      return Op();
+      break;
   // composite terms
     case YICES_ITE_TERM:
-  YICES_APP_TERM,
-  YICES_UPDATE_TERM,
-  YICES_TUPLE_TERM,
-  YICES_EQ_TERM,
-  YICES_DISTINCT_TERM,
-  YICES_FORALL_TERM,
-  YICES_LAMBDA_TERM,
-  YICES_NOT_TERM,
-  YICES_OR_TERM,
-  YICES_XOR_TERM,
-  YICES_BV_ARRAY,
-  YICES_BV_DIV,
-  YICES_BV_REM,
-  YICES_BV_SDIV,
-  YICES_BV_SREM,
-  YICES_BV_SMOD,
-  YICES_BV_SHL,
-  YICES_BV_LSHR,
-  YICES_BV_ASHR,
-  YICES_BV_GE_ATOM,
-  YICES_BV_SGE_ATOM,
-  YICES_ARITH_GE_ATOM,
-  YICES_ARITH_ROOT_ATOM,
-  YICES_ABS,
-  YICES_CEIL,
-  YICES_FLOOR,
-  YICES_RDIV,
-  YICES_IDIV,
-  YICES_IMOD,
-  YICES_IS_INT_ATOM,
-  YICES_DIVIDES_ATOM,
-  // projections
-  YICES_SELECT_TERM,
-  YICES_BIT_TERM,
-  // sums
-  YICES_BV_SUM,
-  YICES_ARITH_SUM,
-  // products
-  YICES_POWER_PRODUCT
+      return Op(Ite);
+      break;
+  // YICES_APP_TERM,
+  // YICES_UPDATE_TERM,
+  // YICES_TUPLE_TERM,
+  case YICES_EQ_TERM:
+      return Op(Equal);
+      break;
+  // YICES_DISTINCT_TERM,
+  // YICES_FORALL_TERM,
+  // YICES_LAMBDA_TERM,
+  // YICES_OR_TERM,
+  // YICES_XOR_TERM,
+  // YICES_BV_ARRAY,
+  // YICES_BV_DIV,
+  // YICES_BV_REM,
+  // YICES_BV_SDIV,
+  // YICES_BV_SREM,
+  // YICES_BV_SMOD,
+  // YICES_BV_SHL,
+  // YICES_BV_LSHR,
+  // YICES_BV_ASHR,
+  // YICES_BV_GE_ATOM,
+  // YICES_BV_SGE_ATOM,
+  // YICES_ARITH_GE_ATOM,
+  // YICES_ARITH_ROOT_ATOM,
+  // YICES_ABS,
+  // YICES_CEIL,
+  // YICES_FLOOR,
+  // YICES_RDIV,
+  // YICES_IDIV,
+  // YICES_IMOD,
+  // YICES_IS_INT_ATOM,
+  // YICES_DIVIDES_ATOM,
+  // // projections
+  // YICES_SELECT_TERM,
+  // YICES_BIT_TERM,
+  // // sums
+  case YICES_BV_SUM:
+      return Op(BVAdd);
+      break;
+  case YICES_ARITH_SUM:
+      return Op(Plus);
+      break;
+  // // products
+  // YICES_POWER_PRODUCT
     default:
       return Op();
       break;

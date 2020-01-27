@@ -70,6 +70,7 @@ const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
       { Mult, yices_mul },
       { Div, yices_division },
       { Lt, yices_arith_lt_atom },
+      // { Lt, ext_yices_lt },
       { Le, yices_arith_leq_atom },
       { Gt, yices_arith_gt_atom },
       { Ge, yices_arith_geq_atom },
@@ -114,7 +115,8 @@ const unordered_map<PrimOp, yices_tern_fun> yices_ternary_ops(
       { Ite, yices_ite },
       { BVAnd, yices_bvand3 },
       { BVOr, yices_bvor3 },
-      { BVXor, yices_bvxor3 }
+      { BVXor, yices_bvxor3 },
+      { Apply, yices_application2}
     });
 
 const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
@@ -267,8 +269,7 @@ Term Yices2Solver::make_term(const std::string val,
   {
     cout << "making int term from string: " << val << endl;
     int i = stoi(val);
-    yices_int64(i);
-    cout << "int term made" << endl;
+    return Term(new Yices2Term(yices_int64(i)));
 
   }
   else
@@ -754,6 +755,9 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
+  std::cout << "op " << op << std::endl;
+  std::cout << "t0 " << t0 << std::endl;
+  std::cout << "t1 " << t1 << std::endl;
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
   shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
   term_t res;
