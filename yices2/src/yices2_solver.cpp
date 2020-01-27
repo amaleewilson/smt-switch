@@ -776,6 +776,12 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     {
       cout << "two terms" << endl;
 
+      if (op.to_string() == "null")
+      {
+        cout << "op is null " << endl; 
+        
+      }
+
       string msg("Can't apply ");
       msg += op.to_string();
       msg += " to two terms, or not supported by Yices2 backend yet.";

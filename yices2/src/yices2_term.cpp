@@ -42,7 +42,7 @@ const Term Yices2TermIter::operator*()
 
   if (! yices_term_is_composite (term) && !yices_term_is_function(term)){
     // cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
-    // cout << " not composite : " << term << endl;
+    cout << " not composite : " << (Term(new Yices2Term(term)))->to_string() << endl;
     // cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
     // cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
     // cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
@@ -82,7 +82,7 @@ const Term Yices2TermIter::operator*()
   }
   else if (yices_term_is_product(term))
   {
-    // cout << "term is product " << endl;
+    cout << "term is product " << endl;
     term_t component;
     int32_t i = pos;
     uint32_t exp; // todo: make this equal to the size of the bv
@@ -101,19 +101,43 @@ const Term Yices2TermIter::operator*()
     // cout << "child count: " << yices_term_num_children(term) << endl;
     // cout << "yices_term_is_arithmetic: " << yices_term_is_arithmetic(term) << endl;
 
-    term_t test_child = yices_term_child(term, pos);
-    // cout << "test child " << test_child << endl;
+    // term_t test_child = yices_term_child(term, pos);
 
     yices_sum_component(term, i, coeff, &component);
     // cout << "component called = " << endl;
     // cout << "component after call = " << component << endl;
 
+    // cout << "coeff " << coeff << endl;
+    gmp_printf ("%s is an mpz %Qd\n", "here", coeff);
+    cout << "component " << (Term(new Yices2Term(component)))->to_string() << endl;
 
-    return Term(new Yices2Term(component));
+    if (mpq_cmp_si(coeff,1,1) != 0)
+    {
+      cout << "MPQ not ONE" << endl;
+      Term to_ret = Term(new Yices2Term(yices_mul(component, yices_mpq(coeff))));
+      shared_ptr<Yices2Term> ret2 = std::static_pointer_cast<Yices2Term>(to_ret);
+      cout << ret2->term << endl;
+      cout << ret2->to_string() << endl;
+      cout << "is prod? " << yices_term_is_product(ret2->term) << endl;
+      cout << "type ? " << yices_term_is_product(ret2->term) << endl;
+      cout << " yices_term_is_scalar : " << yices_term_is_scalar(ret2->term) << endl;
+      cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(ret2->term) << endl;
+      cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(ret2->term) << endl;
+      cout << " yices_term_is_composite : " << yices_term_is_composite(ret2->term) << endl;
+      cout << " type : " << yices_type_of_term(ret2->term) << endl;
+      return to_ret;
+    }
+    else
+    {
+      cout << "MPQ eq ONE" << endl;
+      return Term(new Yices2Term(component));
+    }
+
   }
   else
   {
     cout << " falling through... " << tc << " is it yices_arith_leq_atom? " << " pos " << pos << endl;
+    cout << "get_op " << (Term(new Yices2Term(term)))->get_op() << endl;
     if (tc == 28 )
     {
       Term qq = Term(new Yices2Term(yices_term_child(term, pos)));
@@ -248,7 +272,9 @@ Op Yices2Term::get_op() const
   // YICES_RDIV,
   // YICES_IDIV,
   // YICES_IMOD,
-  // YICES_IS_INT_ATOM,
+  case YICES_IS_INT_ATOM:
+    // How to discriminate amongst the atomics? 
+    std::cout << " !!! IS INT ATOM " << std::endl;
   // YICES_DIVIDES_ATOM,
   // // projections
   // YICES_SELECT_TERM,
@@ -334,7 +360,7 @@ bool Yices2Term::is_symbolic_const() const
   // an uninterpreted term can be a function, so this is v problematic. 
   /// TODO: question: what about constant arrays???????
   return (tc == YICES_UNINTERPRETED_TERM && yices_term_num_children(term) == 0) ||
-          tc == YICES_BV_CONSTANT;
+          tc == YICES_BV_CONSTANT; //|| yices_term_is_atomic(term);
 
 
   // throw NotImplementedException(

@@ -44,8 +44,11 @@ Sort TermTranslator::transfer_sort(const Sort & sort)
 
 Term TermTranslator::transfer_term(const Term & term)
 {
+  // std::cout << "trace1" << std::endl;
   if (cache.find(term) != cache.end())
   {
+    std::cout << "cache.at(term) " << cache.at(term) << std::endl;
+
     return cache.at(term);
   }
 
@@ -55,7 +58,9 @@ Term TermTranslator::transfer_term(const Term & term)
   Sort s;
   while (to_visit.size())
   {
+
     t = to_visit.back();
+    std::cout << "-- T@63: " << t << std::endl;
     to_visit.pop_back();
 
     if (cache.find(t) == cache.end())
@@ -64,6 +69,8 @@ Term TermTranslator::transfer_term(const Term & term)
       {
         s = transfer_sort(t->get_sort());
         std::string name = t->to_string();
+        std::cout << "-- (is sym_const) T->to_string() @ 72: " << t->to_string() << std::endl;
+
         cache[t] = solver->make_symbol(t->to_string(), s);
       }
       else
@@ -72,25 +79,37 @@ Term TermTranslator::transfer_term(const Term & term)
         cache[t] = t;
         // need to visit it again
         to_visit.push_back(t);
+        std::cout << "-- pushing T to to_visit @82: " << t << std::endl;
+
         for (auto c : t)
         {
+          std::cout << "-- pushing C to to_visit @86: " << c << std::endl;
+
           to_visit.push_back(c);
         }
       }
     }
     else
     {
+      std::cout << "-- Clearing children @ 94" << std::endl;
+
       cached_children.clear();
       for (auto c : t)
       {
+        std::cout << "-- pushing C to cached_children @99: " << c << std::endl;
+
         cached_children.push_back(cache.at(c));
       }
 
       if (t->is_value())
       {
+        std::cout << "-- T is value @106 " << t << std::endl;
+
         s = transfer_sort(t->get_sort());
         if (t->get_op() == Const_Array)
         {
+          std::cout << "!!!! get_op == Const_Array " << std::endl;
+
           // special case for const-array
           Term val = cache.at(*(t->begin()));
           if (s->get_sort_kind() != ARRAY)
@@ -108,15 +127,23 @@ Term TermTranslator::transfer_term(const Term & term)
         }
         else
         {
+          std::cout << "get_op not Const_Array" << std::endl;
+
           cache[t] = value_from_smt2(t->to_string(), s);
+          std::cout << "-- cache[t] = value_from_smt2(t->to_string(), s) @ 133 T = " << t << std::endl;
+
         }
       }
       else if (cached_children.size())
       {
+        std::cout << "-- line 139 cached_children.size() = " << cached_children.size() << std::endl;
+        std::cout << "-- t->get_op = " << t->get_op() << std::endl;
         cache[t] = solver->make_term(t->get_op(), cached_children);
       }
       else if (t->is_symbolic_const())
       {
+        std::cout << "-- is_symbolic_const line 145 " << t << std::endl;
+
         // already created symbol and added to cache
         continue;
       }
@@ -126,6 +153,8 @@ Term TermTranslator::transfer_term(const Term & term)
       }
     }
   }
+  
+  std::cout << "-- line 156, cached term = " << cache[term] << std::endl;
 
   return cache[term];
 }
@@ -178,6 +207,7 @@ Term TermTranslator::value_from_smt2(const std::string val,
   }
   else if ((sk == INT) || (sk == REAL))
   {
+    std::cout << "val: " << val << std::endl;
     return solver->make_term(val, sort);
   }
   // this check HAS to come after bit-vector check
