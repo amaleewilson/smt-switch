@@ -670,7 +670,9 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
 {
+  //std::cout << "make term with one arg, primop = " << (op.prim_op == Not)  << std::endl;
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
+  //std::cout << "term exist?  = " <<  yterm->term << std::endl;
   term_t res;
 
   if (op.prim_op == Extract)
@@ -730,6 +732,10 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
     }
     res = yices_bvconst_int64(yterm->term, op.idx0);
   }
+  else if (op.prim_op == Plus)
+  {
+    cout << " prim_op == Plus" << endl;
+  }
   else if (!op.num_idx)
   {
     if (yices_unary_ops.find(op.prim_op) != yices_unary_ops.end())
@@ -755,9 +761,9 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
-  std::cout << "op " << op << std::endl;
-  std::cout << "t0 " << t0 << std::endl;
-  std::cout << "t1 " << t1 << std::endl;
+  //std::cout << "op " << op << std::endl;
+  //std::cout << "t0 " << "t0" << std::endl;
+  //std::cout << "t1 " << "t1" << std::endl;
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
   shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
   term_t res;
@@ -843,6 +849,7 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
   }
   else if (size == 1)
   {
+    //std::cout << "size == 1" << std::endl;
     return make_term(op, terms[0]);
   }
   else if (size == 2)

@@ -35,22 +35,20 @@ int main()
   s2->set_opt("produce-models", "true");
   s2->set_opt("incremental", "true");
 
-  // Just try seeing what happens with s
   TermTranslator tt(s2);
-  // TermTranslator tt(s);
 
   Term constraint2 = tt.transfer_term(constraint);
-  // Term T2 = tt.transfer_term(T);
+  Term T2 = tt.transfer_term(T);
   // // ensure it can handle transfering again (even though it already built the
   // // node)
-  // constraint2 = tt.transfer_term(constraint);
-  // s2->assert_formula(constraint2);
+  constraint2 = tt.transfer_term(constraint);
+  s2->assert_formula(constraint2);
 
-  // cout << "term from solver 1: " << constraint << endl;
-  // cout << "term from solver 2: " << constraint2 << endl;
+  cout << "term from solver 1: " << constraint << endl;
+  cout << "term from solver 2: " << constraint2 << endl;
 
-  // assert(s->check_sat().is_sat());
-  // assert(s2->check_sat().is_sat());
+  assert(s->check_sat().is_sat());
+  assert(s2->check_sat().is_sat());
 
   return 0;
 }

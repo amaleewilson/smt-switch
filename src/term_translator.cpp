@@ -138,6 +138,9 @@ Term TermTranslator::transfer_term(const Term & term)
       {
         std::cout << "-- line 139 cached_children.size() = " << cached_children.size() << std::endl;
         std::cout << "-- t->get_op = " << t->get_op() << std::endl;
+        std::cout << "-- t : " << t << std::endl;
+        std::cout << "-- t : " << cached_children[0]->to_string() << std::endl;
+
         cache[t] = solver->make_term(t->get_op(), cached_children);
       }
       else if (t->is_symbolic_const())
