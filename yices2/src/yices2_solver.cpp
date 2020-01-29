@@ -761,7 +761,7 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
-  //std::cout << "op " << op << std::endl;
+  std::cout << "op " << op << std::endl;
   //std::cout << "t0 " << "t0" << std::endl;
   //std::cout << "t1 " << "t1" << std::endl;
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
@@ -800,6 +800,7 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
+  cout << "make term.. is not? " << (yices_term_constructor(res) == YICES_NOT_TERM) << endl;
     return Term(new Yices2Term(res));
 }
 
