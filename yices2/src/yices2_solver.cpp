@@ -419,74 +419,87 @@ Term Yices2Solver::get_value(Term & t) const
 
 Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
 {
-  // try
-  // {
-  //   Sort s(new CVC4Sort(solver.declareSort(name, arity)));
-  //   return s;
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
+  type_t y_sort;
+
+  if (!arity)
+  {
+    y_sort = yices_new_uninterpreted_type();
+  }
+  else
+  {
+    throw NotImplementedException(
+      "Yices does not support uninterpreted type with non-zero arity.");
+    // // Could return new scalar type, but the argument for the Yices 
+    // // function is for cardinality, not arity. 
+    // return Sort(new Yices2Sort(yices_new_scalar_type(arity)));
+  }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Sort(new Yices2Sort(y_sort));
 }
 
 Sort Yices2Solver::make_sort(SortKind sk) const
 {
-  try
+  type_t y_sort;
+
+  if (sk == BOOL)
   {
-    if (sk == BOOL)
-    {
-      Sort s(new Yices2Sort(yices_bool_type()));
-      return s;
-    }
-    else if (sk == INT)
-    {
-      Sort s(new Yices2Sort(yices_int_type()));
-      return s;
-    }
-    else if (sk == REAL)
-    {
-      Sort s(new Yices2Sort(yices_real_type()));
-      return s;
-    }
-    else
-    {
-      std::string msg("Can't create sort with sort constructor ");
-      msg += to_string(sk);
-      msg += " and no arguments";
-      throw IncorrectUsageException(msg.c_str());
-    }
+    y_sort = yices_bool_type();
   }
-  catch (std::exception & e)
+  else if (sk == INT)
   {
-    throw InternalSolverException(e.what());
+    y_sort = yices_int_type();
   }
+  else if (sk == REAL)
+  {
+    y_sort = yices_real_type();
+  }
+  else
+  {
+    std::string msg("Can't create sort with sort constructor ");
+    msg += to_string(sk);
+    msg += " and no arguments";
+    throw IncorrectUsageException(msg.c_str());
+  }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+  
+  return Sort(new Yices2Sort(y_sort));
 }
 
-// WiP
 Sort Yices2Solver::make_sort(SortKind sk, uint64_t size) const
 {
-  try
+  type_t y_sort;
+
+  if (sk == BV)
   {
-    if (sk == BV)
-    {
-      Sort s(new Yices2Sort(yices_bv_type(size)));
-      return s;
-    }
-    else
-    {
-      std::string msg("Can't create sort with sort constructor ");
-      msg += to_string(sk);
-      msg += " and an integer argument";
-      throw IncorrectUsageException(msg.c_str());
-    }
+    y_sort = yices_bv_type(size);
   }
-  catch (std::exception & e)
+  else
   {
-    throw InternalSolverException(e.what());
+    std::string msg("Can't create sort with sort constructor ");
+    msg += to_string(sk);
+    msg += " and an integer argument";
+    throw IncorrectUsageException(msg.c_str());
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Sort(new Yices2Sort(y_sort));
 }
 
 Sort Yices2Solver::make_sort(SortKind sk, const Sort & sort1) const
@@ -499,6 +512,7 @@ Sort Yices2Solver::make_sort(SortKind sk,
                            const Sort & sort1,
                            const Sort & sort2) const
 {
+  type_t y_sort;
 
   if (sk == ARRAY)
   {
@@ -506,8 +520,7 @@ Sort Yices2Solver::make_sort(SortKind sk,
         std::static_pointer_cast<Yices2Sort>(sort1);
     std::shared_ptr<Yices2Sort> yelemsort =
         std::static_pointer_cast<Yices2Sort>(sort2);
-    Sort s(new Yices2Sort(yices_function_type1(yidxsort->type, yelemsort->type), yidxsort->type, yelemsort->type));
-    return s;
+    y_sort = yices_function_type1(yidxsort->type, yelemsort->type);
   }
   else
   {
@@ -516,6 +529,14 @@ Sort Yices2Solver::make_sort(SortKind sk,
     msg += " and two Sort arguments";
     throw IncorrectUsageException(msg.c_str());
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Sort(new Yices2Sort(y_sort));
 }
 
 Sort Yices2Solver::make_sort(SortKind sk,
@@ -530,6 +551,8 @@ Sort Yices2Solver::make_sort(SortKind sk,
 
 Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
 {
+  type_t y_sort;
+
   if (sk == FUNCTION)
   {
     if (sorts.size() < 2)
@@ -541,34 +564,22 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     // arity is one less, because last sort is return sort
     uint32_t arity = sorts.size() - 1;
 
-    // string decl_name("internal_ref_fun");
-
     std::vector<type_t> ysorts;
 
     ysorts.reserve(arity);
 
-    type_t ysort;
+    type_t ys;
     for (uint32_t i = 0; i < arity; i++)
     {
-      ysort = std::static_pointer_cast<Yices2Sort>(sorts[i])->type;
-      ysorts.push_back(ysort);
-      // decl_name += ("_" + sorts[i]->to_string());
+      ys = std::static_pointer_cast<Yices2Sort>(sorts[i])->type;
+      ysorts.push_back(ys);
     }
 
     Sort sort = sorts.back();
-    ysort = std::static_pointer_cast<Yices2Sort>(sort)->type;
-    // decl_name += ("_return_" + sort->to_string());
+    ys = std::static_pointer_cast<Yices2Sort>(sort)->type;
 
-    type_t yfunsort = yices_function_type(arity, &ysorts[0], ysort);
+    y_sort = yices_function_type(arity, &ysorts[0], ys);
 
-
-    // creating a reference decl, because it's the only way to get codomain and
-    // domain sorts i.e. there's no msat_is_function_type(msat_env, msat_type)
-    // msat_decl ref_fun_decl =
-    //     msat_declare_function(env, decl_name.c_str(), mfunsort);
-
-    Sort funsort(new Yices2Sort(yfunsort, true));
-    return funsort;
   }
   else if (sorts.size() == 1)
   {
@@ -589,6 +600,15 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     msg += " with a vector of sorts";
     throw IncorrectUsageException(msg.c_str());
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  cout << "returning function sort... " << endl;
+  return Sort(new Yices2Sort(y_sort, true));
 }
 
 Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)

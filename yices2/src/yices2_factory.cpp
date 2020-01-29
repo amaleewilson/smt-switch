@@ -9,11 +9,14 @@ bool initialized = false;
 /* Yices2SolverFactory implementation */
 SmtSolver Yices2SolverFactory::create()
 {
+  // Must initialize only once.
+  // Different instances of the solver will have 
+  // different contexts. 
   if (!initialized)
   {
-  	std::cout << "initializing yices " << std::endl;
+    std::cout << "initializing yices " << std::endl;
     yices_init();
-  	initialized = true;
+    initialized = true;
   }
 
   return std::make_unique<Yices2Solver>();
