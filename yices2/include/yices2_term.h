@@ -13,9 +13,6 @@ namespace smt {
 // forward declaration
 class Yices2Solver;
 
-// helpers
-// Op lookup_op(Btor * btor, Yices2Node * n);
-
 class Yices2TermIter : public TermIterBase
 {
  public:
@@ -50,17 +47,13 @@ class Yices2Term : public AbsTerm
   bool is_value() const override;
   virtual std::string to_string() const override;
   uint64_t to_int() const override;
-  /** Iterators for traversing the children
-   */
+  /* Iterators for traversing the children */
   TermIter begin() override;
   TermIter end() override;
 
  protected:
   term_t term;
   bool is_function;
-
-  // helpers
-  // bool is_const_array() const;
 
   friend class Yices2Solver;
   friend class Yices2TermIter;

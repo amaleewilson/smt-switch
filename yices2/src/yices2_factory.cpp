@@ -14,7 +14,6 @@ SmtSolver Yices2SolverFactory::create()
   // different contexts. 
   if (!initialized)
   {
-    std::cout << "initializing yices " << std::endl;
     yices_init();
     initialized = true;
   }

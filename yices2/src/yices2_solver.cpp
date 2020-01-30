@@ -22,6 +22,7 @@ typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 
  //  // Integers only
 // yices_power(term_t t1, uint32_t d) 
+// need to convert term to int... 
  //  Pow,
 
  //  // Int/Real Conversion and Queries
@@ -255,7 +256,6 @@ Term Yices2Solver::make_term(const std::string val,
   }
   else if (sk == REAL)
   {
-    cout << "making real term from string" << endl;
     if (base != 10) 
     {
       // TODO: better error message...
@@ -267,7 +267,6 @@ Term Yices2Solver::make_term(const std::string val,
   }
   else if (sk == INT)
   {
-    cout << "making int term from string: " << val << endl;
     int i = stoi(val);
     return Term(new Yices2Term(yices_int64(i)));
 
@@ -607,7 +606,6 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     throw InternalSolverException(msg.c_str());
   }
 
-  cout << "returning function sort... " << endl;
   return Sort(new Yices2Sort(y_sort, true));
 }
 
@@ -690,9 +688,7 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
 {
-  //std::cout << "make term with one arg, primop = " << (op.prim_op == Not)  << std::endl;
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
-  //std::cout << "term exist?  = " <<  yterm->term << std::endl;
   term_t res;
 
   if (op.prim_op == Extract)
@@ -752,10 +748,6 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
     }
     res = yices_bvconst_int64(yterm->term, op.idx0);
   }
-  else if (op.prim_op == Plus)
-  {
-    cout << " prim_op == Plus" << endl;
-  }
   else if (!op.num_idx)
   {
     if (yices_unary_ops.find(op.prim_op) != yices_unary_ops.end())
@@ -781,9 +773,6 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
-  // std::cout << "op " << op << std::endl;
-  //std::cout << "t0 " << "t0" << std::endl;
-  //std::cout << "t1 " << "t1" << std::endl;
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
   shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
   term_t res;
@@ -800,14 +789,6 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     }
     else
     {
-      cout << "two terms" << endl;
-
-      if (op.to_string() == "null")
-      {
-        cout << "op is null " << endl; 
-        
-      }
-
       string msg("Can't apply ");
       msg += op.to_string();
       msg += " to two terms, or not supported by Yices2 backend yet.";
@@ -820,7 +801,6 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
-  cout << "make term.. is not? " << (yices_term_constructor(res) == YICES_NOT_TERM) << endl;
     return Term(new Yices2Term(res));
 }
 
@@ -841,7 +821,6 @@ Term Yices2Solver::make_term(Op op,
     }
     else
     {
-      cout << "three terms" << endl;
       string msg("Can't apply ");
       msg += op.to_string();
       msg += " to two terms, or not supported by Yices2 backend yet.";
@@ -854,8 +833,7 @@ Term Yices2Solver::make_term(Op op,
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
-  cout << "make term.. is not? " << (yices_term_constructor(res) == YICES_NOT_TERM) << endl;
-  
+
     return Term(new Yices2Term(res));
 }
 
@@ -872,7 +850,6 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
   }
   else if (size == 1)
   {
-    //std::cout << "size == 1" << std::endl;
     return make_term(op, terms[0]);
   }
   else if (size == 2)
