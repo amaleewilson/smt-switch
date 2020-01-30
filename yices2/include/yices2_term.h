@@ -40,7 +40,7 @@ class Yices2Term : public AbsTerm
 {
  public:
   Yices2Term(term_t t) : term(t) {};
-  Yices2Term(term_t t, uint32_t ar) : term(t), term_arity(ar) {};
+  Yices2Term(term_t t, bool is_fun) : term(t), is_function(is_fun) {};
   ~Yices2Term() {};
   std::size_t hash() const override;
   bool compare(const Term & absterm) const override;
@@ -57,27 +57,10 @@ class Yices2Term : public AbsTerm
 
  protected:
   term_t term;
-  // Btor * btor;
-  // the actual API level node that is used
-  // Yices2Node * node;
-  // the real address of the boolector node
-  // allows us to look up:
-  //   kind: for retrieving operator
-  //   e:    for getting children
-  // BtorNode * bn;
-  // true iff the node is negated
-  bool negated;
-  // true iff the node is a symbolic constant
-  bool is_sym;
-  // for iterating args nodes
-  // BtorArgsIterator ait;
-  // for storing nodes before iterating
-  // std::vector<BtorNode *> children;
   bool is_function;
-  uint32_t term_arity; 
 
   // helpers
-  bool is_const_array() const;
+  // bool is_const_array() const;
 
   friend class Yices2Solver;
   friend class Yices2TermIter;

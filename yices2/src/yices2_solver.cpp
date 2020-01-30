@@ -781,7 +781,7 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
 {
-  std::cout << "op " << op << std::endl;
+  // std::cout << "op " << op << std::endl;
   //std::cout << "t0 " << "t0" << std::endl;
   //std::cout << "t1 " << "t1" << std::endl;
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
@@ -854,6 +854,8 @@ Term Yices2Solver::make_term(Op op,
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
+  cout << "make term.. is not? " << (yices_term_constructor(res) == YICES_NOT_TERM) << endl;
+  
     return Term(new Yices2Term(res));
 }
 
@@ -922,68 +924,6 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
     throw IncorrectUsageException(msg);
   }
 }
-//     if (sk == FUNCTION)
-//   {
-//     if (sorts.size() < 2)
-//     {
-//       throw IncorrectUsageException(
-//           "Function sort must have >=2 sort arguments.");
-//     }
-
-//     // arity is one less, because last sort is return sort
-//     uint32_t arity = sorts.size() - 1;
-
-//     // string decl_name("internal_ref_fun");
-
-//     std::vector<type_t> ysorts;
-
-//     ysorts.reserve(arity);
-
-//     type_t ysort;
-//     for (uint32_t i = 0; i < arity; i++)
-//     {
-//       ysort = std::static_pointer_cast<Yices2Sort>(sorts[i])->type;
-//       ysorts.push_back(ysort);
-//       // decl_name += ("_" + sorts[i]->to_string());
-//     }
-
-//     Sort sort = sorts.back();
-//     ysort = std::static_pointer_cast<Yices2Sort>(sort)->type;
-//     // decl_name += ("_return_" + sort->to_string());
-
-//     type_t yfunsort = yices_function_type(arity, &ysorts[0], ysort);
-
-
-//     // creating a reference decl, because it's the only way to get codomain and
-//     // domain sorts i.e. there's no msat_is_function_type(msat_env, msat_type)
-//     // msat_decl ref_fun_decl =
-//     //     msat_declare_function(env, decl_name.c_str(), mfunsort);
-
-//     Sort funsort(new Yices2Sort(yfunsort, true));
-//     return funsort;
-//   }
-//   else if (sorts.size() == 1)
-//   {
-//     return make_sort(sk, sorts[0]);
-//   }
-//   else if (sorts.size() == 2)
-//   {
-//     return make_sort(sk, sorts[0], sorts[1]);
-//   }
-//   else if (sorts.size() == 3)
-//   {
-//     return make_sort(sk, sorts[0], sorts[1], sorts[2]);
-//   }
-//   else
-//   {
-//     std::string msg("Can't create sort from sort constructor ");
-//     msg += to_string(sk);
-//     msg += " with a vector of sorts";
-//     throw IncorrectUsageException(msg.c_str());
-//   }
-//   throw NotImplementedException(
-//       "Smt-switch does not have any sorts that take one sort parameter yet.");
-// }
 
 void Yices2Solver::reset()
 {

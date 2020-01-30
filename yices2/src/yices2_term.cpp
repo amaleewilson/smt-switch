@@ -39,18 +39,18 @@ void Yices2TermIter::operator++() {
 const Term Yices2TermIter::operator*()
 {
   term_constructor_t tc = yices_term_constructor(term);
-    cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
-    cout << " is not? " << (tc == YICES_NOT_TERM) << endl;
-    cout << " not composite : " << (Term(new Yices2Term(term)))->to_string() << endl;
-    cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
-    cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
-    cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
-    cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
-    cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
-    cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(term) << endl;
-    cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(term) << endl;
-    cout << " type : " << yices_type_of_term(term) << endl;
-    cout << "num children " << yices_term_num_children(term) << endl;
+    // cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
+    // cout << " is not? " << (tc == YICES_NOT_TERM) << endl;
+    // cout << " not composite : " << (Term(new Yices2Term(term)))->to_string() << endl;
+    // cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
+    // cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
+    // cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
+    // cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
+    // cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
+    // cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(term) << endl;
+    // cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(term) << endl;
+    // cout << " type : " << yices_type_of_term(term) << endl;
+    // cout << "num children " << yices_term_num_children(term) << endl;
     // cout << " child 0 " << yices_term_child(term, 0) << endl;
     // cout << " child 1 " << yices_term_child(term, 1) << endl;
     // cout << " child 2 " << yices_term_child(term, 2) << endl;
@@ -76,20 +76,20 @@ const Term Yices2TermIter::operator*()
   }
 
   if (! yices_term_is_composite (term) && !yices_term_is_function(term)){
-    cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
-    cout << " not composite : " << (Term(new Yices2Term(term)))->to_string() << endl;
-    cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
-    cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
-    cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
-    cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
-    cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
-    cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(term) << endl;
-    cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(term) << endl;
-    cout << " type : " << yices_type_of_term(term) << endl;
-    cout << "num children " << yices_term_num_children(term) << endl;
-    cout << " child 0 " << yices_term_child(term, 0) << endl;
-    cout << " child 1 " << yices_term_child(term, 1) << endl;
-    cout << " child 2 " << yices_term_child(term, 2) << endl;
+    // cout << " is bv sum? " << (tc == YICES_BV_SUM) << endl;
+    // cout << " not composite : " << (Term(new Yices2Term(term)))->to_string() << endl;
+    // cout << " yices_term_is_tuple : " << yices_term_is_tuple(term) << endl;
+    // cout << " yices_term_is_product(term) : " << yices_term_is_product(term) << endl;
+    // cout << " yices_term_bitsize : " << yices_term_bitsize(term) << endl;
+    // cout << "  yices_term_is_ground : " <<  yices_term_is_ground(term) << endl;
+    // cout << " yices_term_is_scalar : " << yices_term_is_scalar(term) << endl;
+    // cout << " yices_term_is_bitvector : " << yices_term_is_bitvector(term) << endl;
+    // cout << " yices_term_is_arithmetic : " << yices_term_is_arithmetic(term) << endl;
+    // cout << " type : " << yices_type_of_term(term) << endl;
+    // cout << "num children " << yices_term_num_children(term) << endl;
+    // cout << " child 0 " << yices_term_child(term, 0) << endl;
+    // cout << " child 1 " << yices_term_child(term, 1) << endl;
+    // cout << " child 2 " << yices_term_child(term, 2) << endl;
     // return Term(new Yices2Term((term)));
   }
 
@@ -178,15 +178,15 @@ const Term Yices2TermIter::operator*()
   }
   else if (yices_term_is_composite(term))
   {
-    cout << " yices term is composite, pos = " << pos << endl;
-    cout << "~ child count: " << yices_term_num_children(term) << endl;
+    // cout << " yices term is composite, pos = " << pos << endl;
+    // cout << "~ child count: " << yices_term_num_children(term) << endl;
 
     uint32_t actual_idx = pos;
     term_t y_nu_term = yices_term_child(term, actual_idx);
 
     Term nu_term = Term(new Yices2Term(yices_term_child(term, actual_idx))); 
-    cout << " nu_term " << nu_term << endl;
-    cout << " nu_term get_op " << nu_term->get_op() << endl;
+    // cout << " nu_term " << nu_term << endl;
+    // cout << " nu_term get_op " << nu_term->get_op() << endl;
 
     return nu_term;
   }
@@ -291,7 +291,7 @@ Op Yices2Term::get_op() const
       ////std::cout << "sres = " << sres << std::endl;
       sres = sres.substr(sres.find("(")+1, sres.length());
       sres = sres.substr(0, sres.find(" "));
-      ////std::cout << sres << std::endl;
+      // std::cout << sres << std::endl;
       // if (sres == "and")
       // {
         ////std::cout << "op = " <<  Op(Mult) << std::endl;
@@ -499,8 +499,14 @@ bool Yices2Term::is_value() const
 
 string Yices2Term::to_string() const
 {
+  cout << "to_string() " << endl;
+  // shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(f);
 
-  std::string sres = yices_term_to_string(term, 120, 1, 0);
+  // shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(*this);
+  Term nu_term = Term(new Yices2Term(this->hash()));
+
+
+  std::string sres = yices_term_to_string(nu_term->hash(), 120, 1, 0);
   return sres;
   // TODO: error handling? 
 
