@@ -1,11 +1,11 @@
 #ifndef SMT_YICES2_SOLVER_H
 #define SMT_YICES2_SOLVER_H
 
+#include <gmp.h>
 #include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <gmp.h>
 
 #include <yices.h>
 
@@ -18,10 +18,9 @@
 #include "smt.h"
 #include "sort.h"
 
-// TODO: Need these or nah? 
+// TODO: Need these or nah?
 #include "ops.h"
 #include "term.h"
-
 
 namespace smt {
 /**
@@ -30,7 +29,7 @@ namespace smt {
 class Yices2Solver : public AbsSmtSolver
 {
  public:
-  Yices2Solver()  
+  Yices2Solver()
   {
     // yices_init();
     ctx = yices_new_context(NULL);
@@ -88,7 +87,7 @@ class Yices2Solver : public AbsSmtSolver
                  const Term & t0,
                  const Term & t1,
                  const Term & t2) const override;
-  // TODO: check for distinct. 
+  // TODO: check for distinct.
   Term make_term(Op op, const TermVec & terms) const override;
   void reset() override;
   void reset_assertions() override;
@@ -103,10 +102,10 @@ class Yices2Solver : public AbsSmtSolver
 
  protected:
   mutable context_t * ctx;
-//   // store the names of created symbols
-//   std::unordered_set<std::string> symbol_names;
-//   // store array bases -- temporary until there are updates to yices2
-//   std::unordered_map<uint64_t, Yices2Node *> array_bases;
+  //   // store the names of created symbols
+  //   std::unordered_set<std::string> symbol_names;
+  //   // store array bases -- temporary until there are updates to yices2
+  //   std::unordered_map<uint64_t, Yices2Node *> array_bases;
 };
 }  // namespace smt
 

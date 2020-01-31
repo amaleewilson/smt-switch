@@ -10,8 +10,8 @@ bool initialized = false;
 SmtSolver Yices2SolverFactory::create()
 {
   // Must initialize only once.
-  // Different instances of the solver will have 
-  // different contexts. 
+  // Different instances of the solver will have
+  // different contexts.
   if (!initialized)
   {
     yices_init();

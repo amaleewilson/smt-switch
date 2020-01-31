@@ -16,7 +16,7 @@ class Yices2Solver;
 class Yices2TermIter : public TermIterBase
 {
  public:
-  Yices2TermIter(term_t t, uint32_t p) : term(t), pos(p) {};
+  Yices2TermIter(term_t t, uint32_t p) : term(t), pos(p){};
   Yices2TermIter(const Yices2TermIter & it);
   ~Yices2TermIter(){};
   Yices2TermIter & operator=(const Yices2TermIter & it);
@@ -36,9 +36,9 @@ class Yices2TermIter : public TermIterBase
 class Yices2Term : public AbsTerm
 {
  public:
-  Yices2Term(term_t t) : term(t) {};
-  Yices2Term(term_t t, bool is_fun) : term(t), is_function(is_fun) {};
-  ~Yices2Term() {};
+  Yices2Term(term_t t) : term(t){};
+  Yices2Term(term_t t, bool is_fun) : term(t), is_function(is_fun){};
+  ~Yices2Term(){};
   std::size_t hash() const override;
   bool compare(const Term & absterm) const override;
   Op get_op() const override;

@@ -1,12 +1,11 @@
 #include "yices2_solver.h"
-#include "yices.h"
 #include <inttypes.h>
+#include "yices.h"
 #include "yices2_extensions.h"
 
 using namespace std;
 
-namespace smt
-{
+namespace smt {
 
 /* Yices2 Op mappings */
 typedef term_t (*yices_un_fun)(term_t);
@@ -17,55 +16,49 @@ typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 // typedef term_t (*yices_bv_fun)(uint32_t, term_t[]);
 
 // TODO:
- //  /* Uninterpreted Functions */
- //  Apply,
+//  /* Uninterpreted Functions */
+//  Apply,
 
- //  // Integers only
-// yices_power(term_t t1, uint32_t d) 
-// need to convert term to int... 
- //  Pow,
+//  // Integers only
+// yices_power(term_t t1, uint32_t d)
+// need to convert term to int...
+//  Pow,
 
- //  // Int/Real Conversion and Queries
- //  To_Real,
+//  // Int/Real Conversion and Queries
+//  To_Real,
 
- //  /* Fixed Size BitVector Theory */
- //  Extract, ??
- //  BVComp, ?? 
+//  /* Fixed Size BitVector Theory */
+//  Extract, ??
+//  BVComp, ??
 
+//  Zero_Extend,
+//  Sign_Extend,
+//  Repeat,
+//  Rotate_Left,
+//  Rotate_Right,
+//  // BitVector Conversion
+//  BV_To_Nat,
+//  Int_To_BV,
 
- //  Zero_Extend,
- //  Sign_Extend,
- //  Repeat,
- //  Rotate_Left,
- //  Rotate_Right,
- //  // BitVector Conversion
- //  BV_To_Nat,
- //  Int_To_BV,
-
- //  /* Array Theory */
- //  Store,
- //  Const_Array,
-
-
+//  /* Array Theory */
+//  Store,
+//  Const_Array,
 
 const unordered_map<PrimOp, yices_un_fun> yices_unary_ops(
-  {
-    { Not, yices_not },
-    { Negate, yices_neg },
-    { Abs, yices_abs },
-    { To_Int, yices_floor },
-    { Is_Int, yices_is_int_atom },
-    { BVNot, yices_bvnot },
-    { BVNeg, yices_bvneg }
-  });
+    { { Not, yices_not },
+      { Negate, yices_neg },
+      { Abs, yices_abs },
+      { To_Int, yices_floor },
+      { Is_Int, yices_is_int_atom },
+      { BVNot, yices_bvnot },
+      { BVNeg, yices_bvneg } });
 
 const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
-    { 
-      { And, yices_and2 },
+    { { And, yices_and2 },
       { Or, yices_or2 },
       { Xor, yices_xor2 },
-      { Implies, yices_implies},
-      { Iff, yices_iff},
+      { Implies, yices_implies },
+      { Iff, yices_iff },
       { Plus, yices_add },
       { Minus, yices_sub },
       { Mult, yices_mul },
@@ -75,9 +68,9 @@ const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
       { Le, yices_arith_leq_atom },
       { Gt, yices_arith_gt_atom },
       { Ge, yices_arith_geq_atom },
-      { Equal, yices_eq }, // yices_arith_eq_atom or yices_eq? 
-      { Mod, yices_imod},
-      { Concat, yices_bvconcat2},
+      { Equal, yices_eq },  // yices_arith_eq_atom or yices_eq?
+      { Mod, yices_imod },
+      { Concat, yices_bvconcat2 },
       { BVAnd, yices_bvand2 },
       { BVOr, yices_bvor2 },
       { BVXor, yices_bvxor2 },
@@ -104,29 +97,27 @@ const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
       { BVSge, yices_bvsge_atom },
       { BVSgt, yices_bvsgt_atom },
       { Select, ext_yices_select },
-      { Apply, yices_application1}
-
+      { Apply, yices_application1 }
 
     });
 
 const unordered_map<PrimOp, yices_tern_fun> yices_ternary_ops(
     { { And, yices_and3 },
-      { Or, yices_or3},
-      { Xor, yices_xor3},
+      { Or, yices_or3 },
+      { Xor, yices_xor3 },
       { Ite, yices_ite },
       { BVAnd, yices_bvand3 },
       { BVOr, yices_bvor3 },
       { BVXor, yices_bvxor3 },
-      { Apply, yices_application2}
-    });
+      { Apply, yices_application2 } });
 
-const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
-    { { And, yices_and },
-      { Or, yices_or},
-      { Xor, yices_xor},
-      { Distinct, yices_distinct}
-      // { BVAnd, yices_bvand } needs const term. 
-    });
+const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops({
+    { And, yices_and },
+    { Or, yices_or },
+    { Xor, yices_xor },
+    { Distinct, yices_distinct }
+    // { BVAnd, yices_bvand } needs const term.
+});
 
 // Need new list for variadic BV functions with const term_t[]. ??
 
@@ -135,9 +126,8 @@ const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
 //       { Or, yices_or},
 //       { Xor, yices_xor},
 //       { Distinct, yices_distinct}
-//       // { BVAnd, yices_bvand } needs const term. 
+//       // { BVAnd, yices_bvand } needs const term.
 //     });
-
 
 /* Yices2Solver implementation */
 
@@ -145,7 +135,7 @@ void Yices2Solver::set_opt(const std::string option, const std::string value)
 {
   try
   {
-    // I think yices ignores some options anyway. 
+    // I think yices ignores some options anyway.
     // Are there any options for this other than produce-models?
     // https://github.com/SRI-CSL/yices2/blob/622f0367ef6b0f4e7bfb380c856bac758f2acbe7/doc/manual/manual.tex
   }
@@ -155,11 +145,11 @@ void Yices2Solver::set_opt(const std::string option, const std::string value)
   }
 }
 
-//TODO!
+// TODO!
 void Yices2Solver::set_logic(const std::string logic) const
 {
   yices_free_context(ctx);
-  ctx_config_t *config = yices_new_config();
+  ctx_config_t * config = yices_new_config();
   yices_default_config_for_logic(config, logic.c_str());
   ctx = yices_new_context(config);
   yices_free_config(config);
@@ -167,7 +157,7 @@ void Yices2Solver::set_logic(const std::string logic) const
 
 Term Yices2Solver::make_term(bool b) const
 {
-  if(b)
+  if (b)
   {
     return Term(new Yices2Term(yices_true()));
   }
@@ -185,28 +175,28 @@ Term Yices2Solver::make_term(bool b) const
   //   throw InternalSolverException(e.what());
   // }
   // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter yet.");
+  //     "Smt-switch does not have any sorts that take one sort parameter
+  //     yet.");
 }
 
 Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
 {
-
-    SortKind sk = sort->get_sort_kind();
-    term_t y_term;
-    if (sk == INT || sk == REAL)
-    {
-      y_term = yices_int64(i);
-    }
-    else if (sk == BV)
-    {
-      y_term = yices_bvconst_int64(sort->get_width(), i);
-    }
-    else 
-    {
-      //TODO
-      throw NotImplementedException(
-      "Smt-switch does not have any sorts that take one sort parameter yet.");
-    }
+  SortKind sk = sort->get_sort_kind();
+  term_t y_term;
+  if (sk == INT || sk == REAL)
+  {
+    y_term = yices_int64(i);
+  }
+  else if (sk == BV)
+  {
+    y_term = yices_bvconst_int64(sort->get_width(), i);
+  }
+  else
+  {
+    // TODO
+    throw NotImplementedException(
+        "Smt-switch does not have any sorts that take one sort parameter yet.");
+  }
 
   Term term(new Yices2Term(y_term));
   // symbol_names.insert(name);
@@ -241,7 +231,8 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
   //   throw IncorrectUsageException(e.what());
   // // }
   // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter yet.");
+  //     "Smt-switch does not have any sorts that take one sort parameter
+  //     yet.");
 }
 
 Term Yices2Solver::make_term(const std::string val,
@@ -256,11 +247,10 @@ Term Yices2Solver::make_term(const std::string val,
   }
   else if (sk == REAL)
   {
-    if (base != 10) 
+    if (base != 10)
     {
       // TODO: better error message...
-      throw NotImplementedException(
-          "base is bad");
+      throw NotImplementedException("base is bad");
     }
 
     return Term(new Yices2Term(yices_parse_float(val.c_str())));
@@ -269,7 +259,6 @@ Term Yices2Solver::make_term(const std::string val,
   {
     int i = stoi(val);
     return Term(new Yices2Term(yices_int64(i)));
-
   }
   else
   {
@@ -286,14 +275,17 @@ Term Yices2Solver::make_term(const Term & val, const Sort & sort) const
   throw NotImplementedException("Constant arrays not yet implemented.");
 }
 
-void Yices2Solver::assert_formula(const Term& t) const
+void Yices2Solver::assert_formula(const Term & t) const
 {
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
 
   int32_t my_error = yices_assert_formula(ctx, yterm->term);
-  if (my_error < 0) {
-    fprintf(stderr, "Assert failed: code = %" PRId32 ", error = %" PRId32 "\n",
-            my_error, yices_error_code());
+  if (my_error < 0)
+  {
+    fprintf(stderr,
+            "Assert failed: code = %" PRId32 ", error = %" PRId32 "\n",
+            my_error,
+            yices_error_code());
     yices_print_error(stderr);
   }
 
@@ -307,7 +299,6 @@ void Yices2Solver::assert_formula(const Term& t) const
 
 Result Yices2Solver::check_sat()
 {
-
   auto res = yices_check_context(ctx, NULL);
   if (res == STATUS_SAT)
   {
@@ -321,14 +312,12 @@ Result Yices2Solver::check_sat()
   {
     return Result(UNKNOWN);
   }
-
 }
 
-// use bvextract, not bitextract. 
+// use bvextract, not bitextract.
 
 Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 {
-
   // expecting (possibly negated) boolean literals
   for (auto a : assumptions)
   {
@@ -347,7 +336,6 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
       }
     }
   }
-  
 
   vector<term_t> y_assumps;
   y_assumps.reserve(assumptions.size());
@@ -359,8 +347,8 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
     y_assumps.push_back(ya->term);
   }
 
-  auto res =
-      yices_check_context_with_assumptions(ctx, NULL, y_assumps.size(), &y_assumps[0]);
+  auto res = yices_check_context_with_assumptions(
+      ctx, NULL, y_assumps.size(), &y_assumps[0]);
 
   if (res == STATUS_SAT)
   {
@@ -405,15 +393,14 @@ void Yices2Solver::pop(uint64_t num)
 Term Yices2Solver::get_value(Term & t) const
 {
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
-  model_t* model = yices_get_model(ctx, true);
+  model_t * model = yices_get_model(ctx, true);
 
   // note: Function types are not supported for get_val_as_term
   term_t yices_val = yices_get_value_as_term(model, yterm->term);
 
   return Term(new Yices2Term(yices_val));
 
-  //todo: error checking. 
-
+  // todo: error checking.
 }
 
 Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
@@ -427,9 +414,9 @@ Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
   else
   {
     throw NotImplementedException(
-      "Yices does not support uninterpreted type with non-zero arity.");
-    // // Could return new scalar type, but the argument for the Yices 
-    // // function is for cardinality, not arity. 
+        "Yices does not support uninterpreted type with non-zero arity.");
+    // // Could return new scalar type, but the argument for the Yices
+    // // function is for cardinality, not arity.
     // return Sort(new Yices2Sort(yices_new_scalar_type(arity)));
   }
 
@@ -472,7 +459,7 @@ Sort Yices2Solver::make_sort(SortKind sk) const
     std::string msg(yices_error_string());
     throw InternalSolverException(msg.c_str());
   }
-  
+
   return Sort(new Yices2Sort(y_sort));
 }
 
@@ -508,8 +495,8 @@ Sort Yices2Solver::make_sort(SortKind sk, const Sort & sort1) const
 }
 
 Sort Yices2Solver::make_sort(SortKind sk,
-                           const Sort & sort1,
-                           const Sort & sort2) const
+                             const Sort & sort1,
+                             const Sort & sort2) const
 {
   type_t y_sort;
 
@@ -539,9 +526,9 @@ Sort Yices2Solver::make_sort(SortKind sk,
 }
 
 Sort Yices2Solver::make_sort(SortKind sk,
-                           const Sort & sort1,
-                           const Sort & sort2,
-                           const Sort & sort3) const
+                             const Sort & sort1,
+                             const Sort & sort2,
+                             const Sort & sort3) const
 {
   throw NotImplementedException(
       "Smt-switch does not have any sorts that take three sort parameters "
@@ -578,7 +565,6 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     ys = std::static_pointer_cast<Yices2Sort>(sort)->type;
 
     y_sort = yices_function_type(arity, &ysorts[0], ys);
-
   }
   else if (sorts.size() == 1)
   {
@@ -615,19 +601,18 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   // avoids memory leak when boolector aborts
   // if (symbol_names.find(name) != symbol_names.end())
   // {
-  //   throw IncorrectUsageException("symbol " + name + " has already been used.");
+  //   throw IncorrectUsageException("symbol " + name + " has already been
+  //   used.");
   // }
 
   // std::shared_ptr<BoolectorSortBase> bs =
   //     std::static_pointer_cast<BoolectorSortBase>(sort);
 
-
   // SortKind sk = sort->get_sort_kind();
-  // term_t y_term; 
+  // term_t y_term;
   shared_ptr<Yices2Sort> ysort = static_pointer_cast<Yices2Sort>(sort);
   term_t y_term = yices_new_uninterpreted_term(ysort->type);
   yices_set_term_name(y_term, name.c_str());
-
 
   //   }
   //   else if (sk == INT)
@@ -645,7 +630,6 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   //   y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
   // }
 
-
   // // yices 2 term_t thing
   // term_t y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
 
@@ -656,12 +640,13 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   //   // TODO: get rid of this
   //   //       only needed now because array models are partial
   //   //       we want to represent it as a sequence of stores
-  //   //       ideally we could get this as a sequence of stores on a const array
+  //   //       ideally we could get this as a sequence of stores on a const
+  //   array
   //   //       from boolector directly
   //   uint64_t node_id = (uint64_t)n;
   //   std::string base_name = name + "_base";
-  //   BoolectorNode * base_node = boolector_array(btor, bs->sort, base_name.c_str());
-  //   if (array_bases.find(node_id) != array_bases.end())
+  //   BoolectorNode * base_node = boolector_array(btor, bs->sort,
+  //   base_name.c_str()); if (array_bases.find(node_id) != array_bases.end())
   //   {
   //     throw InternalSolverException("Error in array model preparation");
   //   }
@@ -683,7 +668,8 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   // symbol_names.insert(name);
   return term;
   // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter yet.");
+  //     "Smt-switch does not have any sorts that take one sort parameter
+  //     yet.");
 }
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
@@ -768,7 +754,7 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
     msg += " not supported for one term argument";
     throw IncorrectUsageException(msg);
   }
-    return Term(new Yices2Term(res));
+  return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
@@ -784,7 +770,7 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     }
     else if (yices_variadic_ops.find(op.prim_op) != yices_variadic_ops.end())
     {
-      term_t terms[2] = {yterm0->term, yterm1->term};
+      term_t terms[2] = { yterm0->term, yterm1->term };
       res = yices_variadic_ops.at(op.prim_op)(2, terms);
     }
     else if (op.prim_op == Pow)
@@ -805,13 +791,13 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
-    return Term(new Yices2Term(res));
+  return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op,
-                           const Term & t0,
-                           const Term & t1,
-                           const Term & t2) const
+                             const Term & t0,
+                             const Term & t1,
+                             const Term & t2) const
 {
   shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(t0);
   shared_ptr<Yices2Term> yterm1 = static_pointer_cast<Yices2Term>(t1);
@@ -821,7 +807,8 @@ Term Yices2Solver::make_term(Op op,
   {
     if (yices_ternary_ops.find(op.prim_op) != yices_ternary_ops.end())
     {
-      res = yices_ternary_ops.at(op.prim_op)(yterm0->term, yterm1->term, yterm2->term);
+      res = yices_ternary_ops.at(op.prim_op)(
+          yterm0->term, yterm1->term, yterm2->term);
     }
     else
     {
@@ -838,12 +825,11 @@ Term Yices2Solver::make_term(Op op,
     throw IncorrectUsageException(msg);
   }
 
-    return Term(new Yices2Term(res));
+  return Term(new Yices2Term(res));
 }
 
 Term Yices2Solver::make_term(Op op, const TermVec & terms) const
 {
-
   size_t size = terms.size();
   if (!size)
   {
@@ -886,7 +872,7 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
       throw IncorrectUsageException(msg);
     }
 
-    term_t res = yices_application(yterm->term, size - 1,  &yargs[0]);
+    term_t res = yices_application(yterm->term, size - 1, &yargs[0]);
 
     if (res == -1)
     {
@@ -894,7 +880,7 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
     }
     return Term(new Yices2Term(res));
   }
-  //else if() ... check the variadic terms list. 
+  // else if() ... check the variadic terms list.
   else
   {
     string msg("Can't apply ");
@@ -935,7 +921,7 @@ void Yices2Solver::reset_assertions()
 }
 
 Term Yices2Solver::substitute(const Term term,
-                            const UnorderedTermMap & substitution_map) const
+                              const UnorderedTermMap & substitution_map) const
 {
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(term);
 
@@ -967,11 +953,11 @@ Term Yices2Solver::substitute(const Term term,
 
   // TODO: add guarded assertion in debug mode about size of vectors
 
-  term_t res = yices_subst_term(to_subst.size(), &to_subst[0], &values[0], yterm->term);
+  term_t res =
+      yices_subst_term(to_subst.size(), &to_subst[0], &values[0], yterm->term);
 
   return Term(new Yices2Term(res));
 }
-
 
 void Yices2Solver::dump_smt2(FILE * file) const
 {
@@ -990,7 +976,8 @@ void Yices2Solver::dump_smt2(FILE * file) const
 //   }
 //   else if (op.num_idx == 2)
 //   {
-//     return solver.mkOpTerm(primop2optermcon.at(op.prim_op), op.idx0, op.idx1);
+//     return solver.mkOpTerm(primop2optermcon.at(op.prim_op), op.idx0,
+//     op.idx1);
 //   }
 //   else
 //   {
@@ -1002,4 +989,4 @@ void Yices2Solver::dump_smt2(FILE * file) const
 
 /* end Yices2Solver implementation */
 
-}
+}  // namespace smt

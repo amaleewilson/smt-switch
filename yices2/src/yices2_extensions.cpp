@@ -1,29 +1,23 @@
 #ifndef SMT_YICES2_EXTENSIONS_H
 #define SMT_YICES2_EXTENSIONS_H
 
-
+#include <inttypes.h>
 #include "gmp.h"
 #include "yices.h"
 #include "yices2_solver.h"
-#include <inttypes.h>
-
 
 using namespace std;
 
-
 namespace smt {
 
-  term_t ext_yices_select(term_t arr, term_t idx)
-  {
-  	// cout << "ext_select" << endl;
-  	term_t selection = yices_application1(arr, idx);
-  	return selection;
-  }
+term_t ext_yices_select(term_t arr, term_t idx)
+{
+  // cout << "ext_select" << endl;
+  term_t selection = yices_application1(arr, idx);
+  return selection;
+}
 
-
-term_t ext_yices_make_bv_number(const char * val,
-                                  size_t size,
-                                  int base)
+term_t ext_yices_make_bv_number(const char * val, size_t size, int base)
 {
   // gmp should be included because it's a dependency of yices
   mpz_t yval;
@@ -114,7 +108,6 @@ term_t ext_yices_make_bv_number(const char * val,
 
   return res;
 }
-
 
 }  // namespace smt
 
