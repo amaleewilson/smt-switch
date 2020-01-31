@@ -31,10 +31,11 @@ int main()
 
   Term a = s->make_symbol("a", s->make_sort(INT));
   Term b = s->make_symbol("b", s->make_sort(INT));
+  Term c = s->make_symbol("c", s->make_sort(INT));
 
 
   // // original 
-  Term constraint = s->make_term(Equal, z, s->make_term(BVMul, x, y));
+  Term constraint = s->make_term(Equal, c, s->make_term(Pow, b, s->make_term("4", s->make_sort(INT))));
   constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
 
 

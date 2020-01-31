@@ -208,7 +208,7 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
       "Smt-switch does not have any sorts that take one sort parameter yet.");
     }
 
-  Term term(new Yices2Term(y_term, 0));
+  Term term(new Yices2Term(y_term));
   // symbol_names.insert(name);
   return term;
 
@@ -786,6 +786,10 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     {
       term_t terms[2] = {yterm0->term, yterm1->term};
       res = yices_variadic_ops.at(op.prim_op)(2, terms);
+    }
+    else if (op.prim_op == Pow)
+    {
+      res = yices_power(yterm0->term, (t1->to_int()));
     }
     else
     {

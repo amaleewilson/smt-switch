@@ -34,12 +34,13 @@ void print_all_answers(term_t t)
 {
   term_constructor_t tc = yices_term_constructor(t);
   cout << " asking for term " << Term(new Yices2Term(t))->to_string() << endl;
-  cout << " term op " << Term(new Yices2Term(t))->get_op() << endl;
-  cout << "yices_term_is_function " << yices_term_is_function(t) << endl; 
-  cout << "yices_term_is_bvsum " << yices_term_is_bvsum(t) << endl; 
-  cout << "yices_term_is_product " << yices_term_is_product(t) << endl; 
-  cout << "yices_term_is_sum " << yices_term_is_sum(t) << endl; 
-  cout << "yices_term_is_composite " << yices_term_is_composite(t) << endl; 
+  // cout << " term op " << Term(new Yices2Term(t))->get_op() << endl;
+  // cout << "num_children?  " << yices_term_num_children(t) << endl; 
+  // cout << "yices_term_is_function " << yices_term_is_function(t) << endl; 
+  // cout << "yices_term_is_bvsum " << yices_term_is_bvsum(t) << endl; 
+  // cout << "yices_term_is_product " << yices_term_is_product(t) << endl; 
+  // cout << "yices_term_is_sum " << yices_term_is_sum(t) << endl; 
+  // cout << "yices_term_is_composite " << yices_term_is_composite(t) << endl; 
 
   cout << "is YICES_SELECT_TERM ? " << (tc == YICES_SELECT_TERM) << endl;
   cout << "is YICES_BIT_TERM ? " << (tc == YICES_BIT_TERM) << endl;
@@ -51,6 +52,8 @@ void print_all_answers(term_t t)
   cout << "is YICES_UNINTERPRETED_TERM ? " << (tc == YICES_UNINTERPRETED_TERM) << endl;
 
   cout << " tc = " << tc << endl;
+
+  cout << " errors? " << yices_error_string() << endl;
 }
 
 const Term Yices2TermIter::operator*()
@@ -89,12 +92,22 @@ const Term Yices2TermIter::operator*()
   {
     cout << "product" << endl;
     term_t component;
-    cout << "pos " << pos << endl;
     uint32_t exp; // todo: make this equal to the size of the bv
-    yices_product_component(term, pos, &component, &exp);
-    cout << "component " << Term(new Yices2Term(component))->to_string() << endl;
-    print_all_answers(term);
-    print_all_answers(component);
+    if (yices_term_num_children(term) == 1)
+    {
+      if (!pos)
+      {
+        yices_product_component(term, pos, &component, &exp);
+        return Term(new Yices2Term(component));
+      }
+      else
+      {
+        print_all_answers(yices_int64(exp));
+        yices_product_component(term, pos-1, &component, &exp);
+        return Term(new Yices2Term(yices_int64(exp)));
+      }
+    }
+    
     if (exp != 1)
     {
       return Term(new Yices2Term(yices_power(component, exp)));
@@ -274,19 +287,32 @@ Op Yices2Term::get_op() const
     case YICES_ARITH_SUM:
       /* Arithmetic sums are represented as polynomials, 
        * and something like (+ a (-b)) is actually 
-       * (+ (* 1 a) (* -1 b)), but the individual component
+       * (+ a (* -1 b)), but the individual component
        * (* -1 b) is still of type YICES_ARITH_SUM. To transfer this
        * term, you need to construct the multiply. 
        */
-      if (yices_term_num_children(term) == 1)
+      sres = this->to_string();
+      sres = sres.substr(sres.find("(")+1, sres.length());
+      sres = sres.substr(0, sres.find(" "));
+      if (yices_term_num_children(term) == 1 && sres == "*")
       {
         return Op(Mult);
       }
       return Op(Plus);
     // products
     case YICES_POWER_PRODUCT:
-      string term_str = this->to_string();
-      return Op();
+      sres = this->to_string();
+      sres = sres.substr(sres.find("(")+1, sres.length());
+      sres = sres.substr(0, sres.find(" "));
+      if (sres == "bv-mul")
+      {
+        return Op(BVMul);
+      }
+      if (sres == "*")
+      {
+        return Op(Mult);
+      }
+      return Op(Pow);
     default:
       return Op();
   }
@@ -335,8 +361,8 @@ Sort Yices2Term::get_sort() const
 bool Yices2Term::is_symbolic_const() const
 {
   term_constructor_t tc = yices_term_constructor(term);
-  return (yices_term_constructor(term) == YICES_UNINTERPRETED_TERM && 
-          yices_term_num_children(term) == 0);
+  return ((tc == YICES_UNINTERPRETED_TERM && 
+          yices_term_num_children(term) == 0)) ;
 }
 
 bool Yices2Term::is_value() const
@@ -386,10 +412,9 @@ uint64_t Yices2Term::to_int() const
 {
   std::string val = yices_term_to_string(term, 120, 1, 0);
 
-  bool is_bv = yices_term_is_bitvector(term);
 
   // process bit-vector format
-  if (is_bv)
+  if (yices_term_is_bitvector(term))
   {
     if (val.find("0b") == std::string::npos)
     {
@@ -397,11 +422,22 @@ uint64_t Yices2Term::to_int() const
       msg += " is not a constant term, can't convert to int.";
       throw IncorrectUsageException(msg.c_str());
     }
+    try
+    {
+      return std::stoi(val.substr(val.find("b")+1, val.length()), 0, 2);
+    }
+    catch (std::exception const & e)
+    {
+      std::string msg("Term ");
+      msg += val;
+      msg += " does not contain an integer representable by a machine int.";
+      throw IncorrectUsageException(msg.c_str());
+    }
   }
 
   try
   {
-    return std::stoi(val.substr(val.find("b")+1, val.length()), 0, 2);
+    return std::stoi(val);
   }
   catch (std::exception const & e)
   {
@@ -427,6 +463,10 @@ TermIter Yices2Term::end()
   }
 
   if (this->get_op() == Mult && yices_term_num_children(term) == 1)
+  {
+    return TermIter(new Yices2TermIter(term, yices_term_num_children(term) + 1));
+  }
+  if (this->get_op() == Pow && yices_term_num_children(term) == 1)
   {
     return TermIter(new Yices2TermIter(term, yices_term_num_children(term) + 1));
   }
