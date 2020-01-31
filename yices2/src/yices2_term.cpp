@@ -1,10 +1,7 @@
 #include "yices2_term.h"
-#include "gmp.h"
-#include "yices.h"
-#include "yices2_sort.h"
-
 #include "exceptions.h"
 #include "ops.h"
+#include "yices2_sort.h"
 
 #include <unordered_map>
 
@@ -33,13 +30,13 @@ void print_all_answers(term_t t)
 {
   term_constructor_t tc = yices_term_constructor(t);
   cout << " asking for term " << Term(new Yices2Term(t))->to_string() << endl;
-  // cout << " term op " << Term(new Yices2Term(t))->get_op() << endl;
-  // cout << "num_children?  " << yices_term_num_children(t) << endl;
-  // cout << "yices_term_is_function " << yices_term_is_function(t) << endl;
-  // cout << "yices_term_is_bvsum " << yices_term_is_bvsum(t) << endl;
-  // cout << "yices_term_is_product " << yices_term_is_product(t) << endl;
-  // cout << "yices_term_is_sum " << yices_term_is_sum(t) << endl;
-  // cout << "yices_term_is_composite " << yices_term_is_composite(t) << endl;
+  cout << " term op " << Term(new Yices2Term(t))->get_op() << endl;
+  cout << "num_children?  " << yices_term_num_children(t) << endl;
+  cout << "yices_term_is_function " << yices_term_is_function(t) << endl;
+  cout << "yices_term_is_bvsum " << yices_term_is_bvsum(t) << endl;
+  cout << "yices_term_is_product " << yices_term_is_product(t) << endl;
+  cout << "yices_term_is_sum " << yices_term_is_sum(t) << endl;
+  cout << "yices_term_is_composite " << yices_term_is_composite(t) << endl;
 
   cout << "is YICES_SELECT_TERM ? " << (tc == YICES_SELECT_TERM) << endl;
   cout << "is YICES_BIT_TERM ? " << (tc == YICES_BIT_TERM) << endl;
@@ -62,7 +59,6 @@ const Term Yices2TermIter::operator*()
 
   if (yices_term_is_function(term))
   {
-    cout << "function" << endl;
     if (!pos)
     {
       return Term(new Yices2Term(term));
@@ -76,24 +72,17 @@ const Term Yices2TermIter::operator*()
   }
   else if (yices_term_is_bvsum(term))
   {
-    cout << "bvsum" << endl;
-    cout << ": " << yices_error_string() << endl;
-
     term_t component;
     uint64_t w = (Term(new Yices2Term(term))->get_sort()->get_width());
     int32_t val[w];
     yices_bvsum_component(term, pos, val, &component);
-    cout << ": " << yices_error_string() << endl;
-
     return Term(new Yices2Term(
         yices_bvmul(yices_bvconst_from_array(w, val), component)));
-    // return Term(new Yices2Term(component));
   }
   else if (yices_term_is_product(term))
   {
-    cout << "product" << endl;
     term_t component;
-    uint32_t exp;  // todo: make this equal to the size of the bv
+    uint32_t exp;  
     if (yices_term_num_children(term) == 1)
     {
       if (!pos)
@@ -103,11 +92,12 @@ const Term Yices2TermIter::operator*()
       }
       else
       {
-        print_all_answers(yices_int64(exp));
         yices_product_component(term, pos - 1, &component, &exp);
         return Term(new Yices2Term(yices_int64(exp)));
       }
     }
+
+    yices_product_component(term, pos, &component, &exp);
 
     if (exp != 1)
     {
@@ -120,8 +110,6 @@ const Term Yices2TermIter::operator*()
   }
   else if (yices_term_is_sum(term))
   {
-    cout << "sum" << endl;
-    cout << ": " << yices_error_string() << endl;
 
     term_t component;
     mpq_t coeff;
@@ -133,14 +121,12 @@ const Term Yices2TermIter::operator*()
       if (!pos)
       {
         yices_sum_component(term, pos, coeff, &component);
-        cout << ": " << yices_error_string() << endl;
 
         return Term(new Yices2Term(yices_mpq(coeff)));
       }
       else
       {
         yices_sum_component(term, pos - 1, coeff, &component);
-        cout << ": " << yices_error_string() << endl;
 
         return Term(new Yices2Term(component));
       }
@@ -210,17 +196,18 @@ Op Yices2Term::get_op() const
     case YICES_UNINTERPRETED_TERM: return Op();
     // composite terms
     case YICES_ITE_TERM: return Op(Ite);
-    case YICES_APP_TERM: return Op(Apply);
-    case YICES_UPDATE_TERM: return Op();
-    case YICES_TUPLE_TERM: return Op();
+    case YICES_APP_TERM:
+      if (!is_function)
+      {
+        return Op(Select);
+      }
+      return Op(Apply);
+
     case YICES_EQ_TERM: return Op(Equal);
     case YICES_DISTINCT_TERM: return Op(Distinct);
-    case YICES_FORALL_TERM: return Op();
-    case YICES_LAMBDA_TERM: return Op();
     case YICES_NOT_TERM: return Op(Not);
     case YICES_OR_TERM: return Op(Or);
     case YICES_XOR_TERM: return Op(Xor);
-    case YICES_BV_ARRAY: return Op();
     case YICES_BV_DIV: return Op(BVUdiv);
     case YICES_BV_REM: return Op(BVUrem);
     case YICES_BV_SDIV: return Op(BVSdiv);
@@ -233,17 +220,9 @@ Op Yices2Term::get_op() const
     case YICES_BV_SGE_ATOM: return Op(BVSge);
     case YICES_ARITH_GE_ATOM: return Op(Ge);
     case YICES_ABS: return Op(Abs);
-    case YICES_ARITH_ROOT_ATOM: return Op();
-    case YICES_CEIL: return Op();
-    case YICES_FLOOR: return Op();
     case YICES_RDIV: return Op(Div);
     case YICES_IDIV: return Op(Div);
     case YICES_IMOD: return Op(Mod);
-    case YICES_IS_INT_ATOM: return Op();
-    case YICES_DIVIDES_ATOM: return Op();
-    // projections
-    case YICES_SELECT_TERM: return Op(Select);
-    case YICES_BIT_TERM: return Op();
     // // sums
     case YICES_BV_SUM: return Op(BVAdd);
     case YICES_ARITH_SUM:
@@ -275,46 +254,40 @@ Op Yices2Term::get_op() const
         return Op(Mult);
       }
       return Op(Pow);
+    case YICES_UPDATE_TERM:
+    case YICES_TUPLE_TERM:
+    case YICES_FORALL_TERM:
+    case YICES_LAMBDA_TERM:
+    case YICES_BV_ARRAY:
+    case YICES_ARITH_ROOT_ATOM:
+    case YICES_CEIL:
+    case YICES_FLOOR:
+    case YICES_IS_INT_ATOM:
+    case YICES_DIVIDES_ATOM:
+    // projections
+    case YICES_SELECT_TERM:
+    case YICES_BIT_TERM:
     default: return Op();
   }
 }
 
 Sort Yices2Term::get_sort() const
 {
+  if (yices_term_is_function(term))
+  {
+    // ARRAY
+    if (!is_function)
+    {
+      return Sort(new Yices2Sort(yices_type_of_term(term)));
+    }
+    // FUNCTION
+    else
+    {
+      return Sort(new Yices2Sort(yices_type_of_term(term), true));
+    }
+  }
+
   return Sort(new Yices2Sort(yices_type_of_term(term)));
-  // Reconstruct functions?
-
-  // TODO: need to support functions/arrays.
-
-  // if (!is_uf)
-  // {
-  //   return Sort(new MsatSort(env, msat_term_get_type(term)));
-  // }
-  // else
-  // {
-  //   // need to reconstruct the function type
-  //   vector<msat_type> param_types;
-  //   size_t arity = msat_decl_get_arity(decl);
-  //   param_types.reserve(arity);
-  //   for (size_t i = 0; i < arity; i++)
-  //   {
-  //     param_types.push_back(msat_decl_get_arg_type(decl, i));
-  //   }
-
-  //   if (!param_types.size())
-  //   {
-  //     throw InternalSolverException("Expecting non-zero arity for UF.");
-  //   }
-
-  //   msat_type funtype = msat_get_function_type(env,
-  //                                              &param_types[0],
-  //                                              param_types.size(),
-  //                                              msat_decl_get_return_type(decl));
-
-  //   return Sort(new MsatSort(env, funtype, decl));
-  // }
-  // throw NotImplementedException(
-  //     "Yices2Term function not implemented yet.");
 }
 
 bool Yices2Term::is_symbolic_const() const
@@ -334,41 +307,14 @@ bool Yices2Term::is_value() const
 
 string Yices2Term::to_string() const
 {
-  // shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(f);
-
-  // shared_ptr<Yices2Term> yterm0 = static_pointer_cast<Yices2Term>(*this);
-  Term nu_term = Term(new Yices2Term(this->hash()));
-
-  std::string sres = yices_term_to_string(nu_term->hash(), 120, 1, 0);
-  return sres;
-  // TODO: error handling?
-
-  // if (is_uf)
-  // {
-  //   if (MSAT_ERROR_DECL(decl))
-  //   {
-  //     throw SmtException("Can't get representation for MathSAT error decl!");
-  //   }
-  //   return msat_decl_repr(decl);
-  // }
-  // else
-  // {
-  //   if (MSAT_ERROR_TERM(term))
-  //   {
-  //     throw SmtException("Can't get representation for MathSAT error term!");
-  //   }
-  //   char * s = msat_to_smtlib2_term(env, term);
-  //   string res = s;
-  //   msat_free(s);
-  //   return res;
-  // }
+  return yices_term_to_string(term, 120, 1, 0);
 }
 
 uint64_t Yices2Term::to_int() const
 {
   std::string val = yices_term_to_string(term, 120, 1, 0);
 
-  // process bit-vector format
+  // Process bit-vector format.
   if (yices_term_is_bitvector(term))
   {
     if (val.find("0b") == std::string::npos)
@@ -390,6 +336,7 @@ uint64_t Yices2Term::to_int() const
     }
   }
 
+  // If not bit-vector, try parsing an int from the term.
   try
   {
     return std::stoi(val);
@@ -407,12 +354,6 @@ TermIter Yices2Term::begin() { return TermIter(new Yices2TermIter(term, 0)); }
 
 TermIter Yices2Term::end()
 {
-  if (yices_term_num_children(term) < 0)
-  {
-    // cout << term << endl;
-    // cout << yices_error_string() << endl;
-  }
-
   if (this->get_op() == Mult && yices_term_num_children(term) == 1)
   {
     return TermIter(

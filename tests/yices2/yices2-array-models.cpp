@@ -22,10 +22,15 @@ int main()
   Term x1 = s->make_symbol("x1", bvsort32);
   Term y = s->make_symbol("y", bvsort32);
   Term arr = s->make_symbol("arr", array32_32);
+  cout << "arr: " << arr << " sort : " << arr->get_sort() << endl;
 
-  Term constraint = s->make_term(Equal, s->make_term(Select, arr, x0), x1);
+  Term qq = s->make_term(Select, arr, x0);
+  Term q2 = s->make_term(Select, arr, x1);
+
+
+  Term constraint = s->make_term(Equal, qq, x1);
   constraint = s->make_term(
-      And, constraint, s->make_term(Equal, s->make_term(Select, arr, x1), y));
+      And, constraint, s->make_term(Equal, q2, y));
   constraint = s->make_term(And, constraint, s->make_term(Distinct, x1, y));
   s->assert_formula(constraint);
   Result r = s->check_sat();
@@ -34,8 +39,11 @@ int main()
 
 
   // Cannot do get val on array because it is a function
+  Term qq_val = s->get_value(qq);
+  cout << qq_val << endl;
+  Term q2_val = s->get_value(q2);
+  cout << q2_val << " select op " << q2->get_op()<< endl;
   // Term arr_val = s->get_value(arr);
-
   // cout << arr_val << endl;
 
   return 0;

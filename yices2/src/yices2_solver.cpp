@@ -280,13 +280,16 @@ void Yices2Solver::assert_formula(const Term & t) const
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
 
   int32_t my_error = yices_assert_formula(ctx, yterm->term);
-  if (my_error < 0)
+  if (yices_error_code() != 0)
   {
-    fprintf(stderr,
-            "Assert failed: code = %" PRId32 ", error = %" PRId32 "\n",
-            my_error,
-            yices_error_code());
-    yices_print_error(stderr);
+    std::string msg(yices_error_string());
+    if (my_error == TYPE_MISMATCH)
+    {
+      msg +=
+          ". Term provided to assert_fromula was not a Boolean, which is "
+          "required by Yices.";
+    }
+    throw InternalSolverException(msg.c_str());
   }
 
   // if (yices_assert_formula(ctx, yterm->term))
@@ -364,43 +367,24 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
   }
 }
 
-void Yices2Solver::push(uint64_t num)
-{
-  yices_push(ctx);
-  // try
-  // {
-  //   solver.push(num);
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-}
+void Yices2Solver::push(uint64_t num) { yices_push(ctx); }
 
-void Yices2Solver::pop(uint64_t num)
-{
-  yices_pop(ctx);
-  // try
-  // {
-  //   solver.pop(num);
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-}
+void Yices2Solver::pop(uint64_t num) { yices_pop(ctx); }
 
 Term Yices2Solver::get_value(Term & t) const
 {
   shared_ptr<Yices2Term> yterm = static_pointer_cast<Yices2Term>(t);
   model_t * model = yices_get_model(ctx, true);
 
-  // note: Function types are not supported for get_val_as_term
-  term_t yices_val = yices_get_value_as_term(model, yterm->term);
-
-  return Term(new Yices2Term(yices_val));
-
-  // todo: error checking.
+  if (!yices_term_is_function(yterm->term))
+  {
+    return Term(new Yices2Term(yices_get_value_as_term(model, yterm->term)));
+  }
+  else
+  {
+    throw NotImplementedException(
+        "Yices does not support get-value for arrays.");
+  }
 }
 
 Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
@@ -592,7 +576,8 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     throw InternalSolverException(msg.c_str());
   }
 
-  return Sort(new Yices2Sort(y_sort, true));
+  Sort ts = Sort(new Yices2Sort(y_sort, true));
+  return ts;
 }
 
 Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
@@ -610,6 +595,7 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 
   // SortKind sk = sort->get_sort_kind();
   // term_t y_term;
+  // if (sort )
   shared_ptr<Yices2Sort> ysort = static_pointer_cast<Yices2Sort>(sort);
   term_t y_term = yices_new_uninterpreted_term(ysort->type);
   yices_set_term_name(y_term, name.c_str());
@@ -664,9 +650,13 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   // note: giving the symbol a null Op
   // Yices2Term term(y_term);
 
-  Term term(new Yices2Term(y_term));
+  if (ysort->get_sort_kind() == FUNCTION)
+  {
+    return Term(new Yices2Term(y_term, true));
+  }
+
+  return Term(new Yices2Term(y_term));
   // symbol_names.insert(name);
-  return term;
   // throw NotImplementedException(
   //     "Smt-switch does not have any sorts that take one sort parameter
   //     yet.");
@@ -791,6 +781,14 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     msg += " not supported for two term arguments";
     throw IncorrectUsageException(msg);
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+
+    throw InternalSolverException(msg.c_str());
+  }
+
   return Term(new Yices2Term(res));
 }
 
@@ -896,29 +894,9 @@ void Yices2Solver::reset()
 {
   yices_reset();
   ctx = yices_new_context(NULL);
-  // try
-  // {
-  //   solver.reset();
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
 }
 
-void Yices2Solver::reset_assertions()
-{
-  yices_reset_context(ctx);
-
-  // try
-  // {
-  //   solver.resetAssertions();
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-}
+void Yices2Solver::reset_assertions() { yices_reset_context(ctx); }
 
 Term Yices2Solver::substitute(const Term term,
                               const UnorderedTermMap & substitution_map) const
@@ -930,28 +908,16 @@ Term Yices2Solver::substitute(const Term term,
 
   shared_ptr<Yices2Term> tmp_key;
   shared_ptr<Yices2Term> tmp_val;
-  // TODO: Fallback to parent class implementation if there are uninterpreted
-  // functions
-  //       in the map
+
   for (auto elem : substitution_map)
   {
     tmp_key = static_pointer_cast<Yices2Term>(elem.first);
-    // if (tmp_key->is_uf)
-    // {
-    //   throw NotImplementedException(
-    //       "MathSAT does not support substituting functions");
-    // }
+
     to_subst.push_back(tmp_key->term);
     tmp_val = static_pointer_cast<Yices2Term>(elem.second);
-    // if (tmp_val->is_uf)
-    // {
-    //   throw NotImplementedException(
-    //       "MathSAT does not support substituting functions");
-    // }
+
     values.push_back(tmp_val->term);
   }
-
-  // TODO: add guarded assertion in debug mode about size of vectors
 
   term_t res =
       yices_subst_term(to_subst.size(), &to_subst[0], &values[0], yterm->term);
@@ -963,29 +929,6 @@ void Yices2Solver::dump_smt2(FILE * file) const
 {
   throw NotImplementedException("Not yet implemented dumping smt2");
 }
-
-/**
-   Helper function for creating an OpTerm from an Op
-   Preconditions: op must be indexed, i.e. op.num_idx > 0
-*/
-// ::CVC4::api::OpTerm Yices2Solver::make_op_term(Op op) const
-// {
-//   if (op.num_idx == 1)
-//   {
-//     return solver.mkOpTerm(primop2optermcon.at(op.prim_op), op.idx0);
-//   }
-//   else if (op.num_idx == 2)
-//   {
-//     return solver.mkOpTerm(primop2optermcon.at(op.prim_op), op.idx0,
-//     op.idx1);
-//   }
-//   else
-//   {
-//     throw NotImplementedException(
-//         "CVC4 does not have any indexed "
-//         "operators with more than two indices");
-//   }
-// }
 
 /* end Yices2Solver implementation */
 

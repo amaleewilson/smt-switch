@@ -56,8 +56,8 @@ int main()
   Term z = s->make_term(100, intsort);
   cout << "\t" << z << endl;
 
-  // Term a = s->make_term(Mult, x, y);
-  Term a = s->make_term(Plus, x, y);
+  Term a = s->make_term(Mult, x, y);
+  // Term a = s->make_term(Plus, x, y);
   cout << "\t" << a << endl;
   cout << "\t term constructor is arith? " << (yices_term_constructor(a->hash()) == YICES_POWER_PRODUCT /*== YICES_ARITH_SUM*/) << endl;
   cout << "\t get op? " << (a->get_op()) << endl;

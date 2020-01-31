@@ -68,6 +68,7 @@ int main()
   Sort funsort =
       s->make_sort(FUNCTION, SortVec{ x_lower->get_sort(), x->get_sort() });
   Term uf = s->make_symbol("f", funsort);
+  cout << "uf: " << uf << " sort : " << uf->get_sort() << endl;
   Term uf_app = s->make_term(Apply, uf, x_lower);
   assert(uf_app->get_op() == Apply);
   assert(*uf_app->begin() == uf);

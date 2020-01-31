@@ -3,8 +3,10 @@
 
 #include <vector>
 
+#include "gmp.h"
 #include "term.h"
 #include "utils.h"
+#include "yices.h"
 
 #include "yices2_sort.h"
 
