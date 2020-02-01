@@ -25,7 +25,7 @@ int main()
   Term a = s->make_symbol("a", s->make_sort(INT));
   Term b = s->make_symbol("b", s->make_sort(INT));
 
-  Term constraint = s->make_term(Equal, z, s->make_term(BVAdd, x, y));
+  Term constraint = s->make_term(Equal, z, s->make_term(BVMul, x, y));
   constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
   s->assert_formula(constraint);
 

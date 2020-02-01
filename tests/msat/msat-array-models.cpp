@@ -22,6 +22,8 @@ int main()
   Term x1 = s->make_symbol("x1", bvsort32);
   Term y = s->make_symbol("y", bvsort32);
   Term arr = s->make_symbol("arr", array32_32);
+  cout << "arr: " << arr << " sort : " << arr->get_sort() << endl;
+  
 
   Term constraint = s->make_term(Equal, s->make_term(Select, arr, x0), x1);
   constraint = s->make_term(
