@@ -15,6 +15,7 @@ set(YICES2_TESTS
       yices2-const-arrays # does not work, no term translator yet
       yices2-ite-test
       yices2-neg-numbers
+      yices2-polynomial
 )
 
 foreach(test ${YICES2_TESTS})
