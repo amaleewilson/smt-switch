@@ -777,18 +777,23 @@ Term Yices2Solver::make_term(Op op,
       res = yices_ternary_ops.at(op.prim_op)(
           yterm0->term, yterm1->term, yterm2->term);
     }
+    // TODOOOOO!!!
+    else if (op.prim_op == Plus)
+    {
+      res = yices_add(yterm0->term, yices_add(yterm1->term, yterm2->term));
+    }
     else
     {
       string msg("Can't apply ");
       msg += op.to_string();
-      msg += " to two terms, or not supported by Yices2 backend yet.";
+      msg += " to three terms, or not supported by Yices2 backend yet.";
       throw IncorrectUsageException(msg);
     }
   }
   else
   {
     string msg = op.to_string();
-    msg += " not supported for two term arguments";
+    msg += " not supported for three term arguments";
     throw IncorrectUsageException(msg);
   }
 
