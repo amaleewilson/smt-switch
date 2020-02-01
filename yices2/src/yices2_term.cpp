@@ -26,36 +26,10 @@ Yices2TermIter & Yices2TermIter::operator=(const Yices2TermIter & it)
 
 void Yices2TermIter::operator++() { pos++; }
 
-void print_all_answers(term_t t)
-{
-  term_constructor_t tc = yices_term_constructor(t);
-  cout << " asking for term " << Term(new Yices2Term(t))->to_string() << endl;
-  cout << " term op " << Term(new Yices2Term(t))->get_op() << endl;
-  cout << "num_children?  " << yices_term_num_children(t) << endl;
-  cout << "yices_term_is_function " << yices_term_is_function(t) << endl;
-  cout << "yices_term_is_bvsum " << yices_term_is_bvsum(t) << endl;
-  cout << "yices_term_is_product " << yices_term_is_product(t) << endl;
-  cout << "yices_term_is_sum " << yices_term_is_sum(t) << endl;
-  cout << "yices_term_is_composite " << yices_term_is_composite(t) << endl;
-
-  cout << "is YICES_SELECT_TERM ? " << (tc == YICES_SELECT_TERM) << endl;
-  cout << "is YICES_BIT_TERM ? " << (tc == YICES_BIT_TERM) << endl;
-  cout << "is YICES_BV_SUM ? " << (tc == YICES_BV_SUM) << endl;
-  cout << "is YICES_ARITH_SUM ? " << (tc == YICES_ARITH_SUM) << endl;
-  cout << "is YICES_POWER_PRODUCT ? " << (tc == YICES_POWER_PRODUCT) << endl;
-  cout << "is YICES_BV_CONSTANT ? " << (tc == YICES_BV_CONSTANT) << endl;
-  cout << "is YICES_ARITH_CONSTANT ? " << (tc == YICES_ARITH_CONSTANT) << endl;
-  cout << "is YICES_UNINTERPRETED_TERM ? " << (tc == YICES_UNINTERPRETED_TERM)
-       << endl;
-
-  cout << " tc = " << tc << endl;
-
-  cout << " errors? " << yices_error_string() << endl;
-}
-
 const Term Yices2TermIter::operator*()
 {
   term_constructor_t tc = yices_term_constructor(term);
+  uint32_t actual_idx = pos - 1;
 
   if (yices_term_is_function(term))
   {
@@ -63,13 +37,12 @@ const Term Yices2TermIter::operator*()
     {
       return Term(new Yices2Term(term));
     }
-
     else
     {
-      uint32_t actual_idx = pos - 1;
       return Term(new Yices2Term(yices_term_child(term, actual_idx)));
     }
   }
+  // Must handle polynomial format for bv sums.
   else if (yices_term_is_bvsum(term))
   {
     term_t component;
@@ -79,10 +52,11 @@ const Term Yices2TermIter::operator*()
     return Term(new Yices2Term(
         yices_bvmul(yices_bvconst_from_array(w, val), component)));
   }
+  // Must handle polynomial format for products.
   else if (yices_term_is_product(term))
   {
     term_t component;
-    uint32_t exp;  
+    uint32_t exp;
     if (yices_term_num_children(term) == 1)
     {
       if (!pos)
@@ -92,7 +66,7 @@ const Term Yices2TermIter::operator*()
       }
       else
       {
-        yices_product_component(term, pos - 1, &component, &exp);
+        yices_product_component(term, actual_idx, &component, &exp);
         return Term(new Yices2Term(yices_int64(exp)));
       }
     }
@@ -108,9 +82,9 @@ const Term Yices2TermIter::operator*()
       return Term(new Yices2Term(component));
     }
   }
+  // Must handle polynomial format for sums.
   else if (yices_term_is_sum(term))
   {
-
     term_t component;
     mpq_t coeff;
     mpq_init(coeff);
@@ -126,7 +100,7 @@ const Term Yices2TermIter::operator*()
       }
       else
       {
-        yices_sum_component(term, pos - 1, coeff, &component);
+        yices_sum_component(term, actual_idx, coeff, &component);
 
         return Term(new Yices2Term(component));
       }
@@ -354,6 +328,7 @@ TermIter Yices2Term::begin() { return TermIter(new Yices2TermIter(term, 0)); }
 
 TermIter Yices2Term::end()
 {
+  // Special cases for handling individual components of polynomials.
   if (this->get_op() == Mult && yices_term_num_children(term) == 1)
   {
     return TermIter(

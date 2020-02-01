@@ -193,46 +193,15 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
   }
   else
   {
-    // TODO
-    throw NotImplementedException(
-        "Smt-switch does not have any sorts that take one sort parameter yet.");
+    string msg("Can't create value ");
+    msg += i;
+    msg += " with sort ";
+    msg += sort->to_string();
+    throw IncorrectUsageException(msg);
   }
 
   Term term(new Yices2Term(y_term));
-  // symbol_names.insert(name);
   return term;
-
-  //   ::CVC4::api::Term c;
-
-  //   if ((sk == INT) || (sk == REAL))
-  //   {
-  //     c = solver.mkReal(i);
-  //   }
-  //   else if (sk == BV)
-  //   {
-  //     // CVC4 uses unsigned integers for mkBitVector
-  //     // to avoid casting issues, always use a string in base 10
-  //     std::string sval = std::to_string(i);
-  //     c = solver.mkBitVector(sort->get_width(), sval, 10);
-  //   }
-  //   else
-  //   {
-  //     std::string msg = "Can't create constant with integer for sort ";
-  //     msg += sort->to_string();
-  //     throw IncorrectUsageException(msg.c_str());
-  //   }
-
-  //   Term res(new CVC4Term(c));
-  //   return res;
-  // }
-  // catch (std::exception & e)
-  // {
-  //   // pretty safe to assume that an error is due to incorrect usage
-  //   throw IncorrectUsageException(e.what());
-  // // }
-  // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter
-  //     yet.");
 }
 
 Term Yices2Solver::make_term(const std::string val,
