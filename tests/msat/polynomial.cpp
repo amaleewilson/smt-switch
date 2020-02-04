@@ -69,8 +69,10 @@ int main()
 
   check(&constraint, &s);
 
+  Term bv_sum = s->make_term(BVAdd, x, s->make_term(BVMul, y, z));
+  cout << "bv sum : " << bv_sum << endl;
   constraint = s->make_term(
-      Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
+      Equal, z, bv_sum);
   constraint = s->make_term(And, constraint, s->make_term(Equal, a, b));
 
   check(&constraint, &s);

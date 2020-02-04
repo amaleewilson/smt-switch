@@ -17,10 +17,9 @@
 using namespace smt;
 using namespace std;
 
-void check(Term* constraint, SmtSolver* s)
+void check(Term * constraint, SmtSolver * s)
 {
-  cout << "checking constraint.. " << *constraint << endl;
-
+  // cout << "checking constraint.. " << *constraint << endl;
 
   SmtSolver s2 = Yices2SolverFactory::create();
   s2->set_opt("produce-models", "true");
@@ -57,56 +56,84 @@ int main()
 
   Term constraint;
 
-  // // // original
-  // constraint = s->make_term(
-  //     Equal, c, s->make_term(Pow, b, s->make_term("4", s->make_sort(INT))));
-  // constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  constraint = s->make_term(
+      Equal, c, s->make_term(Pow, b, s->make_term("4", s->make_sort(INT))));
+  constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
-  // constraint = s->make_term(
-  //     Equal, z, s->make_term(BVMul, x, y));
-  // constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  constraint = s->make_term(Equal, z, s->make_term(BVMul, x, y));
+  constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
-  // constraint = s->make_term(
-  //     Equal, z, s->make_term(BVAdd, x, y));
-  // constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  constraint = s->make_term(Equal, z, s->make_term(BVAdd, x, y));
+  constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
-  // constraint = s->make_term(
-  //     Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
-  // constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
+  constraint =
+      s->make_term(Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
+  constraint = s->make_term(And, constraint, s->make_term(Lt, a, b));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
-  // constraint = s->make_term(
-  //     Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
-  // constraint = s->make_term(And, constraint, s->make_term(Equal, a, s->make_term(Pow, b, s->make_term("4", s->make_sort(INT)))));
+  constraint =
+      s->make_term(Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
+  constraint = s->make_term(
+      And,
+      constraint,
+      s->make_term(Equal,
+                   a,
+                   s->make_term(Pow, b, s->make_term("4", s->make_sort(INT)))));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
-  // constraint = s->make_term(
-  //     Equal, z, s->make_term(BVAdd, x, s->make_term(BVMul, y, z)));
+  Term bv_sum = s->make_term(BVAdd, x, s->make_term(BVMul, y, z));
+  // cout << "bv sum : " << bv_sum << endl;
+  constraint = s->make_term(Equal, z, bv_sum);
 
-  // c = s->make_term("3", s->make_sort(INT));
+  c = s->make_term("3", s->make_sort(INT));
 
-  // constraint = s->make_term(And, constraint, s->make_term(Equal, a, s->make_term(Pow, b, c)));
+  constraint = s->make_term(
+      And, constraint, s->make_term(Equal, a, s->make_term(Pow, b, c)));
 
-  // check(&constraint, &s);
+  check(&constraint, &s);
 
   Term d = s->make_symbol("d", s->make_sort(INT));
 
   constraint = s->make_term(
       Equal, s->make_term("100", s->make_sort(INT)), s->make_term(Plus, b, d));
 
-
-  constraint = s->make_term(And, constraint, s->make_term(Ge, b, s->make_term("12", s->make_sort(INT))));
+  constraint =
+      s->make_term(And,
+                   constraint,
+                   s->make_term(Ge, b, s->make_term("12", s->make_sort(INT))));
 
   check(&constraint, &s);
 
+  constraint = s->make_term(
+      Equal,
+      s->make_term("100", s->make_sort(INT)),
+      s->make_term(Plus, b, s->make_term("55", s->make_sort(INT))));
+
+  constraint =
+      s->make_term(And,
+                   constraint,
+                   s->make_term(Ge, b, s->make_term("12", s->make_sort(INT))));
+
+  check(&constraint, &s);
+
+  // non-linear arithmetic warning right now.. 
+  //   constraint = s->make_term(
+  //       Equal, s->make_term("100", s->make_sort(INT)), s->make_term(Mult, b,
+  //       d));
+
+  //   cout << "constraint " << constraint << endl;
+  //   constraint = s->make_term(And, constraint, s->make_term(Ge, b,
+  //   s->make_term("12", s->make_sort(INT))));
+
+  //   check(&constraint, &s);
 
   return 0;
 }
