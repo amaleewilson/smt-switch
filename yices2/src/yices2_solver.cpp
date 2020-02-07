@@ -119,18 +119,9 @@ const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops({
     // { BVAnd, yices_bvand } needs const term.
 });
 
-// Need new list for variadic BV functions with const term_t[]. ??
-
-// const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops(
-//     { { And, yices_and },
-//       { Or, yices_or},
-//       { Xor, yices_xor},
-//       { Distinct, yices_distinct}
-//       // { BVAnd, yices_bvand } needs const term.
-//     });
-
 /* Yices2Solver implementation */
 
+// TODO
 void Yices2Solver::set_opt(const std::string option, const std::string value)
 {
   try
@@ -145,7 +136,6 @@ void Yices2Solver::set_opt(const std::string option, const std::string value)
   }
 }
 
-// TODO!
 void Yices2Solver::set_logic(const std::string logic) const
 {
   yices_free_context(ctx);
@@ -157,26 +147,23 @@ void Yices2Solver::set_logic(const std::string logic) const
 
 Term Yices2Solver::make_term(bool b) const
 {
+  term_t y_term;
   if (b)
   {
-    return Term(new Yices2Term(yices_true()));
+    y_term = yices_true();
   }
   else
   {
-    return Term(new Yices2Term(yices_false()));
+    y_term = yices_false();
   }
-  // try
-  // {
-  //   Term c(new CVC4Term(solver.mkBoolean(b)));
-  //   return c;
-  // }
-  // catch (std::exception & e)
-  // {
-  //   throw InternalSolverException(e.what());
-  // }
-  // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter
-  //     yet.");
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+ 
+ return Term(new Yices2Term(y_term));
 }
 
 Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
@@ -200,34 +187,39 @@ Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
     throw IncorrectUsageException(msg);
   }
 
-  Term term(new Yices2Term(y_term));
-  return term;
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Term(new Yices2Term(y_term));
 }
 
 Term Yices2Solver::make_term(const std::string val,
                              const Sort & sort,
                              uint64_t base) const
 {
+  term_t y_term;
+
   SortKind sk = sort->get_sort_kind();
   if (sk == BV)
   {
-    return Term(new Yices2Term(
-        ext_yices_make_bv_number(val.c_str(), sort->get_width(), base)));
+    y_term = ext_yices_make_bv_number(val.c_str(), sort->get_width(), base);
   }
   else if (sk == REAL)
   {
     if (base != 10)
     {
-      // TODO: better error message...
-      throw NotImplementedException("base is bad");
+      throw NotImplementedException("Does not support base not equal to 10.");
     }
 
-    return Term(new Yices2Term(yices_parse_float(val.c_str())));
+    y_term = yices_parse_float(val.c_str());
   }
   else if (sk == INT)
   {
     int i = stoi(val);
-    return Term(new Yices2Term(yices_int64(i)));
+    y_term = yices_int64(i);
   }
   else
   {
@@ -237,11 +229,19 @@ Term Yices2Solver::make_term(const std::string val,
     msg += sort->to_string();
     throw IncorrectUsageException(msg);
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Term(new Yices2Term(y_term));
 }
 
 Term Yices2Solver::make_term(const Term & val, const Sort & sort) const
 {
-  throw NotImplementedException("Constant arrays not yet implemented.");
+  throw NotImplementedException("Constant arrays not supported for Yices2 backend.");
 }
 
 void Yices2Solver::assert_formula(const Term & t) const
@@ -255,23 +255,24 @@ void Yices2Solver::assert_formula(const Term & t) const
     if (my_error == TYPE_MISMATCH)
     {
       msg +=
-          ". Term provided to assert_fromula was not a Boolean, which is "
+          ". Term provided to assert_formula was not a Boolean, which is "
           "required by Yices.";
     }
     throw InternalSolverException(msg.c_str());
   }
 
-  // if (yices_assert_formula(ctx, yterm->term))
-  // {
-  //   string msg("Cannot assert term: ");
-  //   msg += t->to_string();
-  //   throw IncorrectUsageException(msg);
-  // }
 }
 
 Result Yices2Solver::check_sat()
 {
   auto res = yices_check_context(ctx, NULL);
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
   if (res == STATUS_SAT)
   {
     return Result(SAT);
@@ -295,8 +296,6 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
   {
     if (!a->is_symbolic_const() || a->get_sort()->get_sort_kind() != BOOL)
     {
-      printf("not symbolic constant and not bool.\n");
-
       if (a->get_op() == Not && (*a->begin())->is_symbolic_const())
       {
         continue;
@@ -321,6 +320,12 @@ Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 
   auto res = yices_check_context_with_assumptions(
       ctx, NULL, y_assumps.size(), &y_assumps[0]);
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
 
   if (res == STATUS_SAT)
   {

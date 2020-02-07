@@ -28,15 +28,15 @@ int main()
   shared_ptr<Yices2Term> yterm;
 
 
-  try
-  {
-    Term x = s->make_symbol("x", bvsort8);
-    assert(false);
-  }
-  catch (IncorrectUsageException & e)
-  {
-    cout << "caught error with message: " << e.what() << endl;
-  }
+  // try
+  // {
+  //   Term x = s->make_symbol("x", bvsort8);
+  //   // assert(false);
+  // }
+  // catch (IncorrectUsageException & e)
+  // {
+  //   cout << "caught error with message: " << e.what() << endl;
+  // }
 
   Term y = s->make_symbol("y", bvsort8);
   Term z = s->make_symbol("z", bvsort8);
@@ -72,6 +72,17 @@ int main()
   Term uf_app = s->make_term(Apply, uf, x_lower);
   assert(uf_app->get_op() == Apply);
   assert(*uf_app->begin() == uf);
+  
+  // TODO: this assertion fails... 
+  // assert((*uf_app->begin())->get_sort()->get_sort_kind() == FUNCTION);
+  for (auto c : uf_app)
+  {
+  cout << "c sort  = " << c->get_sort()->to_string() << endl;
+
+  }
+  cout << "(*uf_app->begin())->get_sort() = " << (*uf_app->begin())->get_sort()->to_string() << endl;
+  cout << "funsort " << funsort->to_string() << endl;
+
   assert(uf->get_sort() == funsort);
   assert(uf->get_sort() != uf_app->get_sort());
 

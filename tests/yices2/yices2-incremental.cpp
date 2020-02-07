@@ -50,7 +50,10 @@ int main()
   s->push();
   s->assert_formula(assumption0);
   r = s->check_sat();
+  
+  // TODO: this assertion is failing...
   assert(r.is_unsat());
+
   s->pop();
 
   r = s->check_sat();

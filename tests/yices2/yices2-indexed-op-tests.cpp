@@ -27,12 +27,18 @@ int main()
   Term x_upper = s->make_term(ext74, x);
 
   Op op = x_upper->get_op();
+  // TODO: this is failing with a null op.. 
   cout << "Op: " << op << endl;
 
   Term y_ror = s->make_term(Op(Rotate_Right, 2), y);
   Term y_rol = s->make_term(Op(Rotate_Left, 2), y);
 
+  /// TODO: these assertions are failing.. 
+  cout << "y_ror->to_string()" << y_ror->to_string() << endl;
+  cout << "y_rol->to_string()" << y_rol->to_string() << endl;
+  
   assert(y_ror->to_string() == "((_ rotate_right 2) y)");
+
   assert(y_rol->to_string() == "((_ rotate_left 2) y)");
 
   s->assert_formula(s->make_term(Equal, y_ror, y_rol));
