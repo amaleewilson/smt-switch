@@ -13,30 +13,12 @@ typedef term_t (*yices_bin_fun)(term_t, term_t);
 typedef term_t (*yices_tern_fun)(term_t, term_t, term_t);
 typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 
-// typedef term_t (*yices_bv_fun)(uint32_t, term_t[]);
-
-// TODO:
-//  /* Uninterpreted Functions */
-//  Apply,
-
-//  // Integers only
-// yices_power(term_t t1, uint32_t d)
-// need to convert term to int...
-//  Pow,
-
 //  // Int/Real Conversion and Queries
 //  To_Real,
 
 //  /* Fixed Size BitVector Theory */
-//  Extract, ??
 //  BVComp, ??
 
-//  Zero_Extend,
-//  Sign_Extend,
-//  Repeat,
-//  Rotate_Left,
-//  Rotate_Right,
-//  // BitVector Conversion
 //  BV_To_Nat,
 //  Int_To_BV,
 
@@ -162,8 +144,8 @@ Term Yices2Solver::make_term(bool b) const
     std::string msg(yices_error_string());
     throw InternalSolverException(msg.c_str());
   }
- 
- return Term(new Yices2Term(y_term));
+
+  return Term(new Yices2Term(y_term));
 }
 
 Term Yices2Solver::make_term(int64_t i, const Sort & sort) const
@@ -241,7 +223,8 @@ Term Yices2Solver::make_term(const std::string val,
 
 Term Yices2Solver::make_term(const Term & val, const Sort & sort) const
 {
-  throw NotImplementedException("Constant arrays not supported for Yices2 backend.");
+  throw NotImplementedException(
+      "Constant arrays not supported for Yices2 backend.");
 }
 
 void Yices2Solver::assert_formula(const Term & t) const
@@ -260,7 +243,6 @@ void Yices2Solver::assert_formula(const Term & t) const
     }
     throw InternalSolverException(msg.c_str());
   }
-
 }
 
 Result Yices2Solver::check_sat()
@@ -286,8 +268,6 @@ Result Yices2Solver::check_sat()
     return Result(UNKNOWN);
   }
 }
-
-// use bvextract, not bitextract.
 
 Result Yices2Solver::check_sat_assuming(const TermVec & assumptions)
 {
@@ -456,15 +436,18 @@ Sort Yices2Solver::make_sort(SortKind sk,
                              const Sort & sort1,
                              const Sort & sort2) const
 {
-  type_t y_sort;
+  std::shared_ptr<Yices2Sort> s1 = std::static_pointer_cast<Yices2Sort>(sort1);
+  std::shared_ptr<Yices2Sort> s2 = std::static_pointer_cast<Yices2Sort>(sort2);
+  Sort ret_sort;
 
   if (sk == ARRAY)
   {
-    std::shared_ptr<Yices2Sort> yidxsort =
-        std::static_pointer_cast<Yices2Sort>(sort1);
-    std::shared_ptr<Yices2Sort> yelemsort =
-        std::static_pointer_cast<Yices2Sort>(sort2);
-    y_sort = yices_function_type1(yidxsort->type, yelemsort->type);
+    ret_sort = Sort(new Yices2Sort(yices_function_type1(s1->type, s2->type)));
+  }
+  else if (sk == FUNCTION)
+  {
+    ret_sort =
+        Sort(new Yices2Sort(yices_function_type1(s1->type, s2->type), true));
   }
   else
   {
@@ -480,7 +463,7 @@ Sort Yices2Solver::make_sort(SortKind sk,
     throw InternalSolverException(msg.c_str());
   }
 
-  return Sort(new Yices2Sort(y_sort));
+  return ret_sort;
 }
 
 Sort Yices2Solver::make_sort(SortKind sk,
@@ -550,8 +533,7 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
     throw InternalSolverException(msg.c_str());
   }
 
-  Sort ts = Sort(new Yices2Sort(y_sort, true));
-  return ts;
+  return Sort(new Yices2Sort(y_sort, true));
 }
 
 Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
@@ -763,7 +745,14 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
     throw InternalSolverException(msg.c_str());
   }
 
-  return Term(new Yices2Term(res));
+  if (yices_term_is_function(yterm0->term) && op.prim_op == Apply)
+  {
+    return Term(new Yices2Term(res, true));
+  }
+  else 
+  {
+    return Term(new Yices2Term(res));
+  }
 }
 
 Term Yices2Solver::make_term(Op op,
@@ -781,6 +770,11 @@ Term Yices2Solver::make_term(Op op,
     {
       res = yices_ternary_ops.at(op.prim_op)(
           yterm0->term, yterm1->term, yterm2->term);
+    }
+    else if (yices_variadic_ops.find(op.prim_op) != yices_variadic_ops.end())
+    {
+      term_t terms[3] = { yterm0->term, yterm1->term, yterm2->term };
+      res = yices_variadic_ops.at(op.prim_op)(3, terms);
     }
     // TODOOOOO!!!
     else if (op.prim_op == Plus)
@@ -802,7 +796,14 @@ Term Yices2Solver::make_term(Op op,
     throw IncorrectUsageException(msg);
   }
 
-  return Term(new Yices2Term(res));
+  if (yices_term_is_function(yterm0->term) && op.prim_op == Apply)
+  {
+    return Term(new Yices2Term(res, true));
+  }
+  else 
+  {
+    return Term(new Yices2Term(res));
+  }
 }
 
 Term Yices2Solver::make_term(Op op, const TermVec & terms) const

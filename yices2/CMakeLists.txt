@@ -33,3 +33,10 @@ target_link_libraries(smt-switch-yices2 pthread)
 target_link_libraries(smt-switch-yices2 m)
 
 install(TARGETS smt-switch-yices2 DESTINATION lib)
+
+
+add_executable(ygt ${PROJECT_SOURCE_DIR}/tests/yices2/ygt.cpp)
+target_link_libraries(ygt gtest_main)
+target_link_libraries(ygt smt-switch)
+target_link_libraries(ygt smt-switch-yices2)
+add_test(NAME ygt_test COMMAND ygt)

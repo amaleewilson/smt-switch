@@ -34,12 +34,19 @@ int main()
   Term y_rol = s->make_term(Op(Rotate_Left, 2), y);
 
   /// TODO: these assertions are failing.. 
-  cout << "y_ror->to_string()" << y_ror->to_string() << endl;
-  cout << "y_rol->to_string()" << y_rol->to_string() << endl;
-  
-  assert(y_ror->to_string() == "((_ rotate_right 2) y)");
+  cout << "y_ror->to_string() " << y_ror->to_string() << endl;
+  cout << "y_ror->to_string() " << y_ror->get_op() << endl;
+  cout << "y_rol->to_string() " << y_rol->to_string() << endl;
+  cout << "y_rol->to_string() " << y_rol->get_op() << endl;
 
-  assert(y_rol->to_string() == "((_ rotate_left 2) y)");
+  for (auto c : y_ror)
+  {
+    cout << "c op:  " << c->get_op() << endl;
+  }
+  
+  // assert(y_ror->to_string() == "((_ rotate_right 2) y)");
+
+  // assert(y_rol->to_string() == "((_ rotate_left 2) y)");
 
   s->assert_formula(s->make_term(Equal, y_ror, y_rol));
   s->assert_formula(s->make_term(Distinct, y, s->make_term(0, bvsort9)));

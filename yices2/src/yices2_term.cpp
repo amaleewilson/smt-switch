@@ -194,13 +194,6 @@ Op Yices2Term::get_op() const
   std::string sres;
   switch (tc)
   {
-    // atomic terms
-    case YICES_BOOL_CONSTANT:
-    case YICES_ARITH_CONSTANT:
-    case YICES_BV_CONSTANT:
-    case YICES_SCALAR_CONSTANT:
-    case YICES_VARIABLE:
-    case YICES_UNINTERPRETED_TERM: return Op();
     // composite terms
     case YICES_ITE_TERM: return Op(Ite);
     case YICES_APP_TERM:
@@ -262,18 +255,87 @@ Op Yices2Term::get_op() const
       }
       return Op(Pow);
     case YICES_UPDATE_TERM:
+    cout << "update term" << endl;
+      return Op();
     case YICES_TUPLE_TERM:
+    cout << "tuple term" << endl;
+      return Op();
     case YICES_FORALL_TERM:
+    cout << "forall term" << endl;
+      return Op();
     case YICES_LAMBDA_TERM:
+    cout << "lambda term" << endl;
+      return Op();
     case YICES_BV_ARRAY:
+    cout << "YICES_BV_ARRAY term" << endl;
+
+      sres = this->to_string();
+      sres = sres.substr(sres.find("(") + 1, sres.length());
+      sres = sres.substr(0, sres.find(" "));
+      if (sres == "bv-concat")
+      {
+        return Op(Concat);
+      }
+      return Op();
     case YICES_ARITH_ROOT_ATOM:
+    cout << "arith root term" << endl;
+      return Op();
     case YICES_CEIL:
+    cout << "ceil term" << endl;
+      return Op();
     case YICES_FLOOR:
+    cout << "floor term" << endl;
+      return Op();
     case YICES_IS_INT_ATOM:
+    cout << "is int atom term" << endl;
+      return Op();
     case YICES_DIVIDES_ATOM:
+    cout << "divides atom term" << endl;
+      return Op();
     // projections
     case YICES_SELECT_TERM:
+    cout << "select term" << endl;
+      return Op();
     case YICES_BIT_TERM:
+    // TODO... 
+      cout << "bit term" << endl;
+      sres = this->to_string();
+      sres = sres.substr(sres.find("(") + 1, sres.length());
+      sres = sres.substr(0, sres.find(" "));
+      cout << "sres : " << sres << endl;
+
+      if (sres == "bv-extract")
+      {
+        return Op(Extract);
+      }
+      return Op();
+    // atomic terms
+    case YICES_BOOL_CONSTANT:
+    cout << "bool const" << endl;
+      return Op();
+    case YICES_ARITH_CONSTANT:
+    cout << "arith const" << endl;
+      return Op();
+    case YICES_BV_CONSTANT:
+    cout << "bv const" << endl;
+      return Op();
+    case YICES_SCALAR_CONSTANT:
+    cout << "scalar const" << endl;
+      return Op();
+    case YICES_VARIABLE:
+    cout << "variable" << endl;
+      return Op();
+    case YICES_UNINTERPRETED_TERM: 
+      if (yices_term_is_function(term))
+      {
+        if (!is_function)
+        {
+          return Op(Select);
+        }
+        return Op(Apply);
+      }
+      
+      return Op();
     default: return Op();
   }
 }

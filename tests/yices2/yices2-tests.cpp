@@ -3,12 +3,14 @@
 #include <vector>
 #include "assert.h"
 
-#include "yices2_factory.h"
+#include "gmp.h"
+#include "yices.h"
+
 #include "smt.h"
+#include "yices2_factory.h"
 // after a full installation
 // #include "smt-switch/boolector_factory.h"
 // #include "smt-switch/smt.h"
-
 
 // remove these
 #include "yices2_term.h"
@@ -24,9 +26,7 @@ int main()
   Sort bvsort8 = s->make_sort(BV, 8);
   Term x = s->make_symbol("x", bvsort8);
 
-
   shared_ptr<Yices2Term> yterm;
-
 
   // try
   // {
@@ -41,6 +41,103 @@ int main()
   Term y = s->make_symbol("y", bvsort8);
   Term z = s->make_symbol("z", bvsort8);
   Term _true = s->make_term(true);
+
+  Term t =
+      s->make_term(Iff, s->make_term(Equal, x, y), s->make_term(Equal, x, z));
+  shared_ptr<Yices2Term> yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor "
+       << yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+  t = s->make_term(
+      Implies, s->make_term(Equal, x, y), s->make_term(Equal, x, z));
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor "
+       << yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+  t = s->make_term(Iff, s->make_term(Equal, x, y), s->make_term(Equal, x, z));
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor "
+       << yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+  Sort int_sort = s->make_sort(INT);
+
+  t = s->make_term(Distinct, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor "
+       << yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+  t = s->make_term(BVNot, x);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor "
+       << yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+  for (auto c : t)
+  {
+    cout << "c " << c << " term constructor "
+         << yices_term_constructor(c->hash()) << " op = " << c->get_op()
+         << " yices_term_is_bitvector " << yices_term_is_bitvector(c->hash())
+         << endl;
+    for (auto d : c)
+    {
+      cout << "d " << d << " term constructor "
+           << yices_term_constructor(d->hash()) << " op = " << d->get_op()
+           << " yices_term_is_bitvector " << yices_term_is_bitvector(d->hash())
+           << endl;
+    }
+  }
+
+  Term bvextr = Term(new Yices2Term(yices_bvextract(x->hash(), 6, 6)));
+  // (bool-to-bv (bit x 6))
+  cout << "bvextr " << bvextr << endl;
+
+  t = s->make_term(BVAnd, x, s->make_term(BVNot, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  Term q = *yt->begin();
+  cout << "t " << t << " term constructor " 
+    <<  yices_term_constructor(yt->hash())
+   << " op = " << t->get_op() <<  " yices_term_is_bitvector " 
+   << yices_term_is_bitvector (q->hash()) <<  endl;
+
+
+
+
+
+
+  t = s->make_term(BVOr, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+  t = s->make_term(BVXor, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+  t = s->make_term(BVNand, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+  t = s->make_term(BVNor, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+  t = s->make_term(BVXnor, x, y);
+  yt = std::static_pointer_cast<Yices2Term>(t);
+  cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+  // t = s->make_term(BVComp, x, y);
+  // yt = std::static_pointer_cast<Yices2Term>(t);
+  // cout << "t " << t << " term constructor " <<  yices_term_constructor(yt->hash()) << " op = " << t->get_op() << endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   assert(x != y);
   Term x_copy = x;
   assert(x == x_copy);
@@ -68,7 +165,7 @@ int main()
   Sort funsort =
       s->make_sort(FUNCTION, SortVec{ x_lower->get_sort(), x->get_sort() });
   Term uf = s->make_symbol("f", funsort);
-  cout << "uf: " << uf << " sort : " << uf->get_sort() << endl;
+  cout << "uf: " << uf << " sort : " << uf->get_sort()  << " op " << uf->get_op() << endl;
   Term uf_app = s->make_term(Apply, uf, x_lower);
   assert(uf_app->get_op() == Apply);
   assert(*uf_app->begin() == uf);
@@ -77,7 +174,7 @@ int main()
   // assert((*uf_app->begin())->get_sort()->get_sort_kind() == FUNCTION);
   for (auto c : uf_app)
   {
-  cout << "c sort  = " << c->get_sort()->to_string() << endl;
+    cout << "c sort  = " << c->get_sort()->to_string() << endl;
 
   }
   cout << "(*uf_app->begin())->get_sort() = " << (*uf_app->begin())->get_sort()->to_string() << endl;
