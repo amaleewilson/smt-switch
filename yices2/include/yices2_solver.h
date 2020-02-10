@@ -31,7 +31,6 @@ class Yices2Solver : public AbsSmtSolver
     // yices_init();
     ctx = yices_new_context(NULL);
     config = yices_new_config();
-
   };
   Yices2Solver(const Yices2Solver &) = delete;
   Yices2Solver & operator=(const Yices2Solver &) = delete;
@@ -40,8 +39,8 @@ class Yices2Solver : public AbsSmtSolver
     yices_free_config(config);
     yices_free_context(ctx);
 
-    // TODO: Should probably find a good place to 
-    // call yices_exit. 
+    // TODO: Should probably find a good place to
+    // call yices_exit.
     // yices_exit();
   };
   void set_opt(const std::string option, const std::string value) override;

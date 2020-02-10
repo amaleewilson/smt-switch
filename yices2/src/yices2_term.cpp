@@ -254,21 +254,11 @@ Op Yices2Term::get_op() const
         return Op(Mult);
       }
       return Op(Pow);
-    case YICES_UPDATE_TERM:
-    cout << "update term" << endl;
-      return Op();
-    case YICES_TUPLE_TERM:
-    cout << "tuple term" << endl;
-      return Op();
-    case YICES_FORALL_TERM:
-    cout << "forall term" << endl;
-      return Op();
-    case YICES_LAMBDA_TERM:
-    cout << "lambda term" << endl;
-      return Op();
+    case YICES_UPDATE_TERM: return Op();
+    case YICES_TUPLE_TERM: return Op();
+    case YICES_FORALL_TERM: return Op();
+    case YICES_LAMBDA_TERM: return Op();
     case YICES_BV_ARRAY:
-    cout << "YICES_BV_ARRAY term" << endl;
-
       sres = this->to_string();
       sres = sres.substr(sres.find("(") + 1, sres.length());
       sres = sres.substr(0, sres.find(" "));
@@ -277,55 +267,30 @@ Op Yices2Term::get_op() const
         return Op(Concat);
       }
       return Op();
-    case YICES_ARITH_ROOT_ATOM:
-    cout << "arith root term" << endl;
-      return Op();
-    case YICES_CEIL:
-    cout << "ceil term" << endl;
-      return Op();
-    case YICES_FLOOR:
-    cout << "floor term" << endl;
-      return Op();
-    case YICES_IS_INT_ATOM:
-    cout << "is int atom term" << endl;
-      return Op();
-    case YICES_DIVIDES_ATOM:
-    cout << "divides atom term" << endl;
-      return Op();
+    case YICES_ARITH_ROOT_ATOM: return Op();
+    case YICES_CEIL: return Op();
+    case YICES_FLOOR: return Op();
+    case YICES_IS_INT_ATOM: return Op();
+    case YICES_DIVIDES_ATOM: return Op();
     // projections
-    case YICES_SELECT_TERM:
-    cout << "select term" << endl;
-      return Op();
+    case YICES_SELECT_TERM: return Op();
     case YICES_BIT_TERM:
-    // TODO... 
-      cout << "bit term" << endl;
+      // TODO: Must fix this to extract coorect bit.
       sres = this->to_string();
       sres = sres.substr(sres.find("(") + 1, sres.length());
       sres = sres.substr(0, sres.find(" "));
-      cout << "sres : " << sres << endl;
-
       if (sres == "bv-extract")
       {
         return Op(Extract);
       }
       return Op();
     // atomic terms
-    case YICES_BOOL_CONSTANT:
-    cout << "bool const" << endl;
-      return Op();
-    case YICES_ARITH_CONSTANT:
-    cout << "arith const" << endl;
-      return Op();
-    case YICES_BV_CONSTANT:
-    cout << "bv const" << endl;
-      return Op();
-    case YICES_SCALAR_CONSTANT:
-    cout << "scalar const" << endl;
-      return Op();
-    case YICES_VARIABLE:
-    cout << "variable" << endl;
-      return Op();
-    case YICES_UNINTERPRETED_TERM: 
+    case YICES_BOOL_CONSTANT: return Op();
+    case YICES_ARITH_CONSTANT: return Op();
+    case YICES_BV_CONSTANT: return Op();
+    case YICES_SCALAR_CONSTANT: return Op();
+    case YICES_VARIABLE: return Op();
+    case YICES_UNINTERPRETED_TERM:
       if (yices_term_is_function(term))
       {
         if (!is_function)
@@ -334,7 +299,7 @@ Op Yices2Term::get_op() const
         }
         return Op(Apply);
       }
-      
+
       return Op();
     default: return Op();
   }
