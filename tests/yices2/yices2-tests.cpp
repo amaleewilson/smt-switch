@@ -90,7 +90,7 @@ int main()
   // (bool-to-bv (bit x 6))
   cout << "bvextr " << bvextr << endl;
 
-  t = s->make_term(BVAnd, x, s->make_term(BVNot, y);
+  t = s->make_term(BVAnd, x, s->make_term(BVNot, y));
   yt = std::static_pointer_cast<Yices2Term>(t);
   Term q = *yt->begin();
   cout << "t " << t << " term constructor " 
