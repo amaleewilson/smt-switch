@@ -13,16 +13,15 @@ typedef term_t (*yices_bin_fun)(term_t, term_t);
 typedef term_t (*yices_tern_fun)(term_t, term_t, term_t);
 typedef term_t (*yices_variadic_fun)(uint32_t, term_t[]);
 
-//  // Int/Real Conversion and Queries
+// TODO's:
+// Not sure if these are implemeneted in Yices, may need extension.
 //  To_Real,
-
-//  /* Fixed Size BitVector Theory */
-//  BVComp, ??
-
+//  BVComp,
 //  BV_To_Nat,
-//  Int_To_BV,
 
-//  /* Array Theory */
+// Arrays are represented as functions in Yices.
+// I don't think const_array can be supported, but Store
+// is probably something to go in yices extensions.
 //  Store,
 //  Const_Array,
 
@@ -36,49 +35,27 @@ const unordered_map<PrimOp, yices_un_fun> yices_unary_ops(
       { BVNeg, yices_bvneg } });
 
 const unordered_map<PrimOp, yices_bin_fun> yices_binary_ops(
-    { { And, yices_and2 },
-      { Or, yices_or2 },
-      { Xor, yices_xor2 },
-      { Implies, yices_implies },
-      { Iff, yices_iff },
-      { Plus, yices_add },
-      { Minus, yices_sub },
-      { Mult, yices_mul },
-      { Div, yices_division },
-      { Lt, yices_arith_lt_atom },
-      // { Lt, ext_yices_lt },
-      { Le, yices_arith_leq_atom },
-      { Gt, yices_arith_gt_atom },
-      { Ge, yices_arith_geq_atom },
-      { Equal, yices_eq },  // yices_arith_eq_atom or yices_eq?
-      { Mod, yices_imod },
-      { Concat, yices_bvconcat2 },
-      { BVAnd, yices_bvand2 },
-      { BVOr, yices_bvor2 },
-      { BVXor, yices_bvxor2 },
-      { BVNand, yices_bvnand },
-      { BVNor, yices_bvnor },
-      { BVXnor, yices_bvxnor },
-      { BVAdd, yices_bvadd },
-      { BVSub, yices_bvsub },
-      { BVMul, yices_bvmul },
-      { BVUdiv, yices_bvdiv },
-      { BVUrem, yices_bvrem },
-      { BVSdiv, yices_bvsdiv },
-      { BVSrem, yices_bvsrem },
-      { BVSmod, yices_bvsmod },
-      { BVShl, yices_bvshl },
-      { BVAshr, yices_bvashr },
-      { BVLshr, yices_bvlshr },
-      { BVUlt, yices_bvlt_atom },
-      { BVUle, yices_bvle_atom },
-      { BVUgt, yices_bvgt_atom },
-      { BVUge, yices_bvge_atom },
-      { BVSle, yices_bvsle_atom },
-      { BVSlt, yices_bvslt_atom },
-      { BVSge, yices_bvsge_atom },
-      { BVSgt, yices_bvsgt_atom },
-      { Select, ext_yices_select },
+    { { And, yices_and2 },          { Or, yices_or2 },
+      { Xor, yices_xor2 },          { Implies, yices_implies },
+      { Iff, yices_iff },           { Plus, yices_add },
+      { Minus, yices_sub },         { Mult, yices_mul },
+      { Div, yices_division },      { Lt, yices_arith_lt_atom },
+      { Le, yices_arith_leq_atom }, { Gt, yices_arith_gt_atom },
+      { Ge, yices_arith_geq_atom }, { Equal, yices_eq },
+      { Mod, yices_imod },          { Concat, yices_bvconcat2 },
+      { BVAnd, yices_bvand2 },      { BVOr, yices_bvor2 },
+      { BVXor, yices_bvxor2 },      { BVNand, yices_bvnand },
+      { BVNor, yices_bvnor },       { BVXnor, yices_bvxnor },
+      { BVAdd, yices_bvadd },       { BVSub, yices_bvsub },
+      { BVMul, yices_bvmul },       { BVUdiv, yices_bvdiv },
+      { BVUrem, yices_bvrem },      { BVSdiv, yices_bvsdiv },
+      { BVSrem, yices_bvsrem },     { BVSmod, yices_bvsmod },
+      { BVShl, yices_bvshl },       { BVAshr, yices_bvashr },
+      { BVLshr, yices_bvlshr },     { BVUlt, yices_bvlt_atom },
+      { BVUle, yices_bvle_atom },   { BVUgt, yices_bvgt_atom },
+      { BVUge, yices_bvge_atom },   { BVSle, yices_bvsle_atom },
+      { BVSlt, yices_bvslt_atom },  { BVSge, yices_bvsge_atom },
+      { BVSgt, yices_bvsgt_atom },  { Select, ext_yices_select },
       { Apply, yices_application1 }
 
     });
@@ -98,33 +75,50 @@ const unordered_map<PrimOp, yices_variadic_fun> yices_variadic_ops({
     { Or, yices_or },
     { Xor, yices_xor },
     { Distinct, yices_distinct }
-    // { BVAnd, yices_bvand } needs const term.
+    // { BVAnd, yices_bvand } has different format.
 });
 
 /* Yices2Solver implementation */
 
-// TODO
 void Yices2Solver::set_opt(const std::string option, const std::string value)
 {
-  try
+  if (option == "produce-models")
   {
-    // I think yices ignores some options anyway.
-    // Are there any options for this other than produce-models?
-    // https://github.com/SRI-CSL/yices2/blob/622f0367ef6b0f4e7bfb380c856bac758f2acbe7/doc/manual/manual.tex
+    if (value == "false")
+    {
+      std::cout << "Warning: Yices2 backend always produces models -- it "
+                   "can't be disabled."
+                << std::endl;
+    }
   }
-  catch (std::exception & e)
+  else if (option == "incremental")
   {
-    throw InternalSolverException(e.what());
+    if (value == "false")
+    {
+      yices_set_config(config, "mode", "one-shot");
+    }
+    else if (value == "true")
+    {
+      // TODO: unclear if yices_default_config_for_logic overwrites this.
+      yices_set_config(config, "mode", "push-pop");
+    }
+  }
+  else
+  {
+    string msg("Option ");
+    msg += option;
+    msg += " is not yet supported for the Yices2 backend";
+    throw NotImplementedException(msg);
   }
 }
 
 void Yices2Solver::set_logic(const std::string logic) const
 {
-  yices_free_context(ctx);
-  ctx_config_t * config = yices_new_config();
   yices_default_config_for_logic(config, logic.c_str());
   ctx = yices_new_context(config);
-  yices_free_config(config);
+  // TODO: This enforces and ordering of calling set_opt before set_logic.
+  // Need to decide on a better place to put the context creation.
+  // yices_free_config(config);
 }
 
 Term Yices2Solver::make_term(bool b) const
@@ -353,9 +347,6 @@ Sort Yices2Solver::make_sort(const std::string name, uint64_t arity) const
   {
     throw NotImplementedException(
         "Yices does not support uninterpreted type with non-zero arity.");
-    // // Could return new scalar type, but the argument for the Yices
-    // // function is for cardinality, not arity.
-    // return Sort(new Yices2Sort(yices_new_scalar_type(arity)));
   }
 
   if (yices_error_code() != 0)
@@ -538,73 +529,9 @@ Sort Yices2Solver::make_sort(SortKind sk, const SortVec & sorts) const
 
 Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
 {
-  // check that name is available
-  // avoids memory leak when boolector aborts
-  // if (symbol_names.find(name) != symbol_names.end())
-  // {
-  //   throw IncorrectUsageException("symbol " + name + " has already been
-  //   used.");
-  // }
-
-  // std::shared_ptr<BoolectorSortBase> bs =
-  //     std::static_pointer_cast<BoolectorSortBase>(sort);
-
-  // SortKind sk = sort->get_sort_kind();
-  // term_t y_term;
-  // if (sort )
   shared_ptr<Yices2Sort> ysort = static_pointer_cast<Yices2Sort>(sort);
   term_t y_term = yices_new_uninterpreted_term(ysort->type);
   yices_set_term_name(y_term, name.c_str());
-
-  //   }
-  //   else if (sk == INT)
-  //   {
-  //     Sort s(new Yices2Sort(yices_int_type()));
-  //     return s;
-  //   }
-  //   else if (sk == REAL)
-  //   {
-  //     Sort s(new Yices2Sort(yices_real_type()));
-  //     return s;
-  //   }
-
-  // if (sk == INT){
-  //   y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
-  // }
-
-  // // yices 2 term_t thing
-  // term_t y_term = yices_new_uninterpreted_term(YICES_BV_ARRAY);
-
-  // BoolectorNode * n;
-  // if (sk == ARRAY)
-  // {
-  //   n = boolector_array(btor, bs->sort, name.c_str());
-  //   // TODO: get rid of this
-  //   //       only needed now because array models are partial
-  //   //       we want to represent it as a sequence of stores
-  //   //       ideally we could get this as a sequence of stores on a const
-  //   array
-  //   //       from boolector directly
-  //   uint64_t node_id = (uint64_t)n;
-  //   std::string base_name = name + "_base";
-  //   BoolectorNode * base_node = boolector_array(btor, bs->sort,
-  //   base_name.c_str()); if (array_bases.find(node_id) != array_bases.end())
-  //   {
-  //     throw InternalSolverException("Error in array model preparation");
-  //   }
-  //   array_bases[node_id] = base_node;
-  // }
-  // else if (sk == FUNCTION)
-  // {
-  //   n = boolector_uf(btor, bs->sort, name.c_str());
-  // }
-  // else
-  // {
-  //   n = boolector_var(btor, bs->sort, name.c_str());
-  // }
-
-  // note: giving the symbol a null Op
-  // Yices2Term term(y_term);
 
   if (ysort->get_sort_kind() == FUNCTION)
   {
@@ -612,10 +539,6 @@ Term Yices2Solver::make_symbol(const std::string name, const Sort & sort)
   }
 
   return Term(new Yices2Term(y_term));
-  // symbol_names.insert(name);
-  // throw NotImplementedException(
-  //     "Smt-switch does not have any sorts that take one sort parameter
-  //     yet.");
 }
 
 Term Yices2Solver::make_term(Op op, const Term & t) const
@@ -700,6 +623,13 @@ Term Yices2Solver::make_term(Op op, const Term & t) const
     msg += " not supported for one term argument";
     throw IncorrectUsageException(msg);
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
   return Term(new Yices2Term(res));
 }
 
@@ -749,7 +679,7 @@ Term Yices2Solver::make_term(Op op, const Term & t0, const Term & t1) const
   {
     return Term(new Yices2Term(res, true));
   }
-  else 
+  else
   {
     return Term(new Yices2Term(res));
   }
@@ -776,7 +706,8 @@ Term Yices2Solver::make_term(Op op,
       term_t terms[3] = { yterm0->term, yterm1->term, yterm2->term };
       res = yices_variadic_ops.at(op.prim_op)(3, terms);
     }
-    // TODOOOOO!!!
+    // TODO: Threw this is for term traversal, but it's not a fix.
+    // Need to handle all "variadic" Ops this way with proper L/R association.
     else if (op.prim_op == Plus)
     {
       res = yices_add(yterm0->term, yices_add(yterm1->term, yterm2->term));
@@ -796,11 +727,17 @@ Term Yices2Solver::make_term(Op op,
     throw IncorrectUsageException(msg);
   }
 
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
   if (yices_term_is_function(yterm0->term) && op.prim_op == Apply)
   {
     return Term(new Yices2Term(res, true));
   }
-  else 
+  else
   {
     return Term(new Yices2Term(res));
   }
@@ -809,6 +746,7 @@ Term Yices2Solver::make_term(Op op,
 Term Yices2Solver::make_term(Op op, const TermVec & terms) const
 {
   size_t size = terms.size();
+  term_t res;
   if (!size)
   {
     string msg("Can't apply ");
@@ -850,13 +788,7 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
       throw IncorrectUsageException(msg);
     }
 
-    term_t res = yices_application(yterm->term, size - 1, &yargs[0]);
-
-    if (res == -1)
-    {
-      throw InternalSolverException("Got error term.");
-    }
-    return Term(new Yices2Term(res));
+    res = yices_application(yterm->term, size - 1, &yargs[0]);
   }
   // else if() ... check the variadic terms list.
   else
@@ -868,11 +800,20 @@ Term Yices2Solver::make_term(Op op, const TermVec & terms) const
     msg += " terms.";
     throw IncorrectUsageException(msg);
   }
+
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
+  return Term(new Yices2Term(res));
 }
 
 void Yices2Solver::reset()
 {
   yices_reset();
+  // call this with NULL or config?
   ctx = yices_new_context(NULL);
 }
 
@@ -902,12 +843,19 @@ Term Yices2Solver::substitute(const Term term,
   term_t res =
       yices_subst_term(to_subst.size(), &to_subst[0], &values[0], yterm->term);
 
+  if (yices_error_code() != 0)
+  {
+    std::string msg(yices_error_string());
+    throw InternalSolverException(msg.c_str());
+  }
+
   return Term(new Yices2Term(res));
 }
 
 void Yices2Solver::dump_smt2(FILE * file) const
 {
-  throw NotImplementedException("Not yet implemented dumping smt2");
+  throw NotImplementedException(
+      "Dumping smt2 not supported by Yices2 backend.");
 }
 
 /* end Yices2Solver implementation */

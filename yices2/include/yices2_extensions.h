@@ -2,7 +2,6 @@
 #define SMT_YICES2_EXTENSIONS_H
 
 #include <gmp.h>
-
 #include "yices.h"
 
 namespace smt {

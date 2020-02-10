@@ -18,10 +18,6 @@
 #include "smt.h"
 #include "sort.h"
 
-// TODO: Need these or nah?
-#include "ops.h"
-#include "term.h"
-
 namespace smt {
 /**
    Yices2 Solver
@@ -31,25 +27,21 @@ class Yices2Solver : public AbsSmtSolver
  public:
   Yices2Solver()
   {
+    // Had to move yices_init to the Factory
     // yices_init();
     ctx = yices_new_context(NULL);
+    config = yices_new_config();
 
-    // context_t *ctx = ;
-    // set termination function -- throw an exception
-    // auto throw_exception = [](const char * msg) -> void {
-    //   throw InternalSolverException(msg);
-    // };
-    // yices2_set_abort(throw_exception);
   };
   Yices2Solver(const Yices2Solver &) = delete;
   Yices2Solver & operator=(const Yices2Solver &) = delete;
   ~Yices2Solver()
   {
-    // for (auto elem : array_bases)
-    // {
-    //   yices2_release(btor, elem.second);
-    // }
+    yices_free_config(config);
     yices_free_context(ctx);
+
+    // TODO: Should probably find a good place to 
+    // call yices_exit. 
     // yices_exit();
   };
   void set_opt(const std::string option, const std::string value) override;
@@ -87,25 +79,16 @@ class Yices2Solver : public AbsSmtSolver
                  const Term & t0,
                  const Term & t1,
                  const Term & t2) const override;
-  // TODO: check for distinct.
   Term make_term(Op op, const TermVec & terms) const override;
   void reset() override;
   void reset_assertions() override;
   Term substitute(const Term term,
                   const UnorderedTermMap & substitution_map) const override;
-  // helper methods for making a term with a primitive op
-  Term apply_prim_op(PrimOp op, Term t) const;
-  Term apply_prim_op(PrimOp op, Term t0, Term t1) const;
-  Term apply_prim_op(PrimOp op, Term t0, Term t1, Term t2) const;
-  Term apply_prim_op(PrimOp op, TermVec terms) const;
   void dump_smt2(FILE * file) const override;
 
  protected:
   mutable context_t * ctx;
-  //   // store the names of created symbols
-  //   std::unordered_set<std::string> symbol_names;
-  //   // store array bases -- temporary until there are updates to yices2
-  //   std::unordered_map<uint64_t, Yices2Node *> array_bases;
+  mutable ctx_config_t * config;
 };
 }  // namespace smt
 

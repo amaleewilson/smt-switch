@@ -12,7 +12,6 @@ namespace smt {
 
 term_t ext_yices_select(term_t arr, term_t idx)
 {
-  // cout << "ext_select" << endl;
   term_t selection = yices_application1(arr, idx);
   return selection;
 }
