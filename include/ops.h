@@ -36,6 +36,7 @@ enum PrimOp
   Mod,
   Abs,
   Pow,
+  IntDiv,
   // Int/Real Conversion and Queries
   To_Real,
   To_Int,
@@ -82,7 +83,6 @@ enum PrimOp
   /* Array Theory */
   Select,
   Store,
-  Const_Array,
   /**
      Serves as both the number of ops and a null element for builtin operators.
    */
@@ -101,6 +101,7 @@ struct Op
   Op(PrimOp o, uint64_t idx0, uint64_t idx1)
       : prim_op(o), num_idx(2), idx0(idx0), idx1(idx1){};
   std::string to_string() const;
+  bool is_null() const;
   PrimOp prim_op;
   uint64_t num_idx;
   uint64_t idx0;
